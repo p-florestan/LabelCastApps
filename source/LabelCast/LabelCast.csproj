@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="NJsonSchema" Version="11.1.0" />
+    <PackageReference Include="Npgsql" Version="9.0.2" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.160" />
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />	  
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="DataAccess">
+      <HintPath>..\..\Lib\DataAccess.dll</HintPath>
+    </Reference>
+    <Reference Include="DataAccess.CSVXML">
+      <HintPath>..\..\Lib\DataAccess.CSVXML.dll</HintPath>
+    </Reference>
+    <Reference Include="DataAccess.MSSQL">
+      <HintPath>..\..\Lib\DataAccess.MSSQL.dll</HintPath>
+    </Reference>
+    <Reference Include="DataAccess.Oracle">
+      <HintPath>..\..\Lib\DataAccess.Oracle.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,209 @@
+﻿
+/* CSS for label entry page */
+
+body {
+    overflow: hidden;
+}
+
+.entry {
+    margin-block-start: 2em;
+    margin-inline-start: 2em;
+    max-width: 48ch;
+    border-radius: 1rem;
+    background-color: #f1f1f1;
+    padding: 1rem 1rem 3rem 1rem;
+}
+
+#apptitle {
+    position: relative;
+    display: block;
+    border-radius: 0.3rem;
+    width: 48ch;
+    margin-bottom: 1ch;
+}
+
+.logogroup {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+    .logogroup img {
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+        width: 2em;
+        margin-inline-start: 0.2rem;
+    }
+
+    .logogroup .logo {
+        position: relative;
+        display: inline-block;
+        vertical-align: central;
+        margin-top: 0.15rem;
+        color: royalblue;
+        font-size: 1.2rem;
+        margin-left: 0.5rem;
+    }
+
+.entry header .heading {
+    position: relative;
+    display: inline-block;
+    padding: 0.44rem;
+    font-weight: normal;
+    font-size: medium;
+    background-color: royalblue;
+    color: white;
+    width: 23.8ch;
+    border-radius: 0.25em;
+}
+
+    .entry header .printers {
+        position: relative;
+        width: 48ch;
+    }
+
+    .entry form {
+        position: relative;
+        display: block;
+        width: 100%;
+        margin-top: 5rem;
+    }
+
+#btnPrint {
+    background-color: royalblue;
+    color: white;
+    padding: 0.5rem 3rem;
+    border-radius: 0.3rem;
+    border: none;
+    font: inherit;
+}
+
+.btngroup {
+    position: relative;
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+.entryTable {
+    border-collapse: collapse;
+    border: none;
+    margin-top: 5ch;
+    width: 100%;
+}
+
+    .entryTable .col1 {
+        min-width: 6ch;
+        font-weight: bold;
+        border: 1px solid grey;
+        padding: 0.2rem 2rem 0.2rem 0.5rem;
+        box-sizing: border-box;
+    }
+
+    .entryTable .col2 {
+        border: 1px solid grey;
+        min-width: 24ch;
+    }
+
+        .entryTable input {
+            padding: 0.2rem 1rem 0.2rem 0.5rem;
+            box-sizing: border-box;
+            border: none;
+        }
+
+            .entryTable input:focus {
+                background-color: lightgoldenrodyellow;
+                outline: none;
+            }
+
+
+#errorLabel {
+    color: red;
+    position: relative;
+    min-height: 4ch;
+}
+
+#msgLabel {
+    color: black;
+    position: relative;
+    min-height: 4ch;
+}
+
+
+
+
+/* -------- Overlay with Option ListBox --------------- */
+
+#overlay {
+    position: absolute;
+    top: 15ch;
+    left: 6ch;
+    width: 48ch;
+    height: 50ch;
+    background-color: white;
+    opacity: 95%;
+    border: 1px solid lightgray;
+    border-radius: 0.2rem;
+    display: none;
+}
+
+.listbox {
+    position: relative;
+    border: 1px solid lightgray;
+    border-radius: 0.2rem;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 0;
+    list-style: none;
+    margin: 0;
+}
+
+.listbox-item {
+    padding: 0.5ch;
+    cursor: pointer;
+}
+
+    .listbox-item:hover,
+    .listbox-item:focus {
+        background-color: #e0e0e0;
+    }
+
+    .listbox-item.selected {
+        background-color: #007bff;
+        color: white;
+    }
+
+
+
+
+
+/*
+ * Uncomment this (and set NoDebug = false in labelentry.js) to view diagnostic info
+ *
+#debug {
+    position: relative;
+    display: block;
+    margin-top: 1rem;
+    width: 100%;
+}
+
+#debugMsg {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    height: 60ch;
+    margin: 1rem;
+    width: 40%;
+    border: 1px solid grey;
+}
+
+#debugStatus {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    height: 60ch;
+    margin: 1rem;
+    width: 40%;
+    border: 1px solid grey;
+}
+
+*/

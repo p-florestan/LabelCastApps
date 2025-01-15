@@ -1,0 +1,9 @@
+  <!ELEMENT label (variable, variable)>
+  <!ATTLIST label
+    type CDATA #REQUIRED
+    labelformat CDATA #REQUIRED
+    Quantity CDATA #REQUIRED
+  >
+  
+  <!ELEMENT variable (#PCDATA)>
+  <!ATTLIST variable name CDATA #REQUIRED>

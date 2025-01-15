@@ -1,0 +1,43 @@
+﻿
+/* CSS for custom SELECT */
+/* Based on samples from https://devsnap.me/css-select-boxes*/
+
+
+/* <select> styles */
+select {
+    display: inline-block;
+    float: right;
+    /* Reset */
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 0;
+    outline: 0;
+    font: inherit;
+    /* Personalize */
+    width: 10rem;
+    padding: 0.5rem 1rem 0.5rem 2rem;
+    background-color: royalblue;
+    color: white;
+    border-radius: 0.25em;
+    box-shadow: 0 0 1em 0 rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+    /* Remove IE arrow */
+    select::-ms-expand {
+        display: none;
+    }
+
+    /* Remove focus outline */
+    select:focus {
+        outline: none;
+    }
+
+    /* <option> colors */
+    select option {
+        color: royalblue;
+        background-color: white;
+     }
+
+

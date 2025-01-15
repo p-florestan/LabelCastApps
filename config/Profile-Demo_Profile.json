@@ -1,0 +1,56 @@
+{
+  "Name": "Demo Profile",
+  "Description": "Demonstration Profile",
+  "Abbreviation": "DEMO",
+  "DatabaseType": "SQLite",
+  "DbConnectionString": "Data Source=c:\\Program Info\\LabelCast\\demo-sqlite.db;Version=3;",
+  "DbTimeZone": "UTC",
+  "SqlQuery": "SELECT description, code, price FROM Flowers WHERE name = '{name}' LIMIT 1",
+  "SearchSqlQuery": "SELECT description, code, price FROM Flowers WHERE code LIKE '{name}'",
+  "DisplayField": "",
+  "SearchFields": [
+    "Name"
+  ],
+  "DataFields": [
+    "Description",
+    "Code",
+    "Price"
+  ],
+  "EditableFields": [
+    "Price"
+  ],
+  "LabelTemplate": "c:\\Program Info\\LabelCast\\Demo-Template.prn",
+  "DefaultPrinter": "Demo Printer",
+  "JSONSchema": "",
+  "JSONSchemaOption": "UseProfileSchema",
+  "JSONProfileMap": {},
+  "JSONSearchFieldMap": {
+    "Name": ""
+  },
+  "JSONDataFieldMap": {
+    "Description": "",
+    "Code": "",
+    "Price": ""
+  },
+  "JSONEditFieldMap": {
+    "Price": ""
+  },
+  "JSONPrinterList": [],
+  "JSONLabelCount": "",
+  "XMLSchema": "",
+  "XMLSchemaOption": "UseProfileSchema",
+  "XMLProfileMap": {},
+  "XMLSearchFieldMap": {
+    "Name": ""
+  },
+  "XMLDataFieldMap": {
+    "Description": "",
+    "Code": "",
+    "Price": ""
+  },
+  "XMLEditFieldMap": {
+    "Price": ""
+  },
+  "XMLPrinterList": [],
+  "XMLLabelCount": ""
+}

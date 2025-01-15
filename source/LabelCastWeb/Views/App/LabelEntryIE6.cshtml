@@ -1,0 +1,87 @@
+﻿@using LabelCastWeb.Models;
+@using Newtonsoft.Json;
+@model LabelStructure;
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="~/css/siteIE8.css" />
+    <link rel="stylesheet" href="~/css/labelsIE8.css" />
+</head>
+<body>
+    <!-- LabelEntry page for IE6 browsers -->
+
+    <div class="entry">
+
+        <form method="post" action="/labels/formqueue" autocomplete="off">
+
+            <div class="header">
+                <div class="logogroup">
+                    <img src="~/img/barcode2.png" title="applogo" />
+                    <div class="logo">LabelCast</div>
+                </div>
+                <table id="apptitle">
+                    <tr>
+                        <td class="heading">Data Entry</td>
+                        <td valign="top" class="outermask" width="30%">
+                            <div class="innermask">
+                                <select name="profile" onchange="switchprofile()">
+                                    @foreach (String name in Model.ProfileList)
+                                    {
+                                        <option value="@name" @(name == Model.ActiveProfile ? "selected" : "")>  @name  </option>
+                                    }
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table class="printers">
+                    <tr>
+                        <td>&nbsp;</td>
+                        <td valign="top" class="outermask" width="30%">
+                            <div class="innermask">
+                                <select name="printer" onchange="switchprinter()">
+                                    @foreach (String name in Model.PrinterList)
+                                    {
+                                        <option value="@name" @(name == Model.ActivePrinter ? "selected" : "")>  @name  </option>
+                                    }
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <table class="entryTable">
+                @for (int i = 0; i < @Model.EntryTable.Rows.Count; i++)
+                {
+                    String colID = "col" + i.ToString();
+                    String varName = Model.EntryTable.Rows[i][0].ToString() ?? "";
+                    if (varName == "Number of Labels")
+                        varName = "labelcount";
+                    String value = Model.EntryTable.Rows[i][1].ToString() ?? "";
+                    <tr>
+                        <td class="col1">@Model.EntryTable.Rows[i][0].ToString()</td>
+                        <td class="col2"><input type="text" id="@colID" name="@varName" value="@value" /></td>
+                    </tr>
+                }
+            </table>
+
+            <p>&nbsp;</p>
+            <div id="errorLabel"></div>
+            <div id="msgLabel">@Model.PageMessage</div>
+
+            <div class="btngroup">
+                <button type="submit" id="btnPrint">PRINT</button>
+            </div>
+
+        </form>
+
+    </div>
+
+    <script src="~/js/labelentryIE6.js"></script>
+
+</body>
+</html>

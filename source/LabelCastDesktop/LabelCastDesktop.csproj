@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageIcon></PackageIcon>
+    <ApplicationIcon>barcode2.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="config\**" />
+    <EmbeddedResource Remove="config\**" />
+    <None Remove="config\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Logger.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="barcode2.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LabelCast\LabelCast.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="DataAccess">
+      <HintPath>..\..\Lib\DataAccess.dll</HintPath>
+    </Reference>
+    <Reference Include="DataAccess.CSVXML">
+      <HintPath>..\..\Lib\DataAccess.CSVXML.dll</HintPath>
+    </Reference>
+    <Reference Include="DataAccess.MSSQL">
+      <HintPath>..\..\Lib\DataAccess.MSSQL.dll</HintPath>
+    </Reference>
+    <Reference Include="DataAccess.Oracle">
+      <HintPath>..\..\Lib\DataAccess.Oracle.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Resources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Update="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,8 @@
+[
+  {
+    "Name": "Demo Printer",
+    "Description": "Sample printer for demo purposes",
+    "IPAddress": "0.0.0.0",
+    "Port": 9100
+  }
+]

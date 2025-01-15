@@ -1,0 +1,94 @@
+﻿@using LabelCastWeb.Models;
+@using Newtonsoft.Json;
+@model LabelStructure;
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="~/css/siteIE8.css" />
+    <link rel="stylesheet" href="~/css/labelsIE8.css" />
+</head>
+<body>
+    <!-- LabelEntry page for IE8 browsers -->
+
+    <div class="entry">
+
+        <div class="header">
+            <div class="logogroup">
+                <img src="~/img/barcode2.png" title="applogo" />
+                <div class="logo">LabelCast</div>
+            </div>
+            <table id="apptitle">
+                <tr>
+                    <td class="heading">Data Entry</td>
+                    <td valign="top" class="outermask" width="30%">
+                        <div class="innermask">
+                            <select name="profile">
+                                @foreach (String name in Model.ProfileList)
+                                {
+                                    <option value="@name" @(name == Model.ActiveProfile ? "selected" : "")>  @name  </option>
+                                }
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="printers">
+                <tr>
+                    <td>&nbsp;</td>
+                    <td valign="top" class="outermask" width="30%">
+                        <div class="innermask">
+                            <select name="printer">
+                                @foreach (String name in Model.PrinterList)
+                                {
+                                    <option value="@name" @(name == Model.ActivePrinter ? "selected" : "")>  @name  </option>
+                                }
+                            </select>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <form autocomplete="off">
+            <table class="entryTable">
+                @for (int i = 0; i < @Model.EntryTable.Rows.Count; i++)
+                {
+                    String colID = "col" + i.ToString();
+                    String varName = Model.EntryTable.Rows[i][0].ToString() ?? "";
+                    String value = Model.EntryTable.Rows[i][1].ToString() ?? "";
+                    <tr>
+                        <td class="col1">@Model.EntryTable.Rows[i][0].ToString()</td>
+                        <td class="col2"><input type="text" id="@colID" name="@varName" value="@value" /></td>
+                    </tr>
+                }
+            </table>
+
+            <div id="errorLabel"></div>
+            <div id="msgLabel">@Model.PageMessage</div>
+
+            <div class="btngroup">
+                <button type="button" id="btnPrint">PRINT</button>
+            </div>
+
+        </form>
+
+        <div id="overlay"></div>
+
+    </div>
+
+    <div id="debug">
+        <div id="debugStatus"></div>
+        <div id="debugMsg"></div>
+    </div>
+
+    <script>
+        mDescriptor = JSON.parse('@Html.Raw(JsonConvert.SerializeObject(Model.LabelDescriptor))');
+    </script>
+    <script src="~/js/json2.js"></script>
+    <script src="~/js/labelentryIE8.js"></script>
+
+</body>
+</html>

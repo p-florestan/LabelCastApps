@@ -1,0 +1,6 @@
+<Project>
+    <PropertyGroup>
+        <!-- Define a custom property with the project directory -->
+        <TestDataDirectory>$(ProjectDir)TestData\</TestDataDirectory>
+    </PropertyGroup>
+</Project>

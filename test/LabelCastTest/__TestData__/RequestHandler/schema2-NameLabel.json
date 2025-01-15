@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NameLabel",
+  "type": "object",
+  "properties": {
+      "labeltype": {
+            "type": "string",
+            "description": "Format for labels (profile)",
+            "minLength": 1,
+            "maxLength": 32
+      },
+      "labelcount": {
+            "type": "number",
+            "description": "Number of Labels to print",
+	    "minimum": 1
+      },
+      "item": {
+            "type": "string",
+            "description": "Code of the item",
+            "minLength": 1,
+            "maxLength": 20
+      },
+      "name": {
+            "type": "string",
+            "description": "Item description",
+            "minLength": 0,
+            "maxLength": 100
+      }
+   },
+   "required": ["labeltype", "labelcount", "item", "name"]
+}

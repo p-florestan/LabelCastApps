@@ -1,0 +1,265 @@
+﻿
+/* CSS for label entry page IE6 legacy browser support*/
+
+body {
+    overflow: hidden;
+}
+
+.entry {
+    position: relative;
+    margin-left: 2em;
+    margin-top: 2em;
+    max-width: 300px;
+    background-color: #f9f9f9;
+    padding: 0.5em 0.5em 1.5em 0.5em;
+}
+
+
+.logogroup {
+    position: relative;
+    margin-bottom: 1.5em;
+}
+
+    .logogroup img {
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+        width: 2em;
+        margin-inline-start: 0.2em;
+    }
+
+    .logogroup .logo {
+        position: relative;
+        display: inline-block;
+        vertical-align: central;
+        margin-top: 0.15em;
+        color: royalblue;
+        font-size: 1.2em;
+        margin-left: 0.5em;
+    }
+
+#apptitle {
+    position: relative;
+    width: 100%;
+    border: none;
+}
+
+#apptitle td {
+    border: none;
+}
+
+.entry .header {
+    position: relative;
+    width: 100%;
+}
+
+    .entry .header .heading {
+        position: relative;
+        display: block;
+        width: 170px;
+        padding: 0.5em;
+        font-weight: normal;
+        font-size: medium;
+        margin: 0;
+        background-color: royalblue;
+        color: white;
+    }
+
+    .entry .header .printers {
+        position: relative;
+        width: 100%;
+        border: none;
+    }
+
+    /*
+        .entry .header .printers outermask {
+            position: absolute;
+            right: 1em;
+            top: 1em;
+        }
+    */
+
+    .entry form {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+
+
+.btngroup {
+    position: relative;
+}
+
+#btnPrint {
+    background-color: royalblue;
+    color: white;
+    padding: 0.5em 2em;
+    border: none;
+    font: inherit;
+    float: right;
+}
+
+.entryTable {
+    border-collapse: collapse;
+    border: none;
+    margin-top: 2em;
+}
+
+    .entryTable .col1 {
+        min-width: 8em;
+        font-weight: bold;
+        font-size: smaller;
+        border: 1px solid grey;
+        padding: 0.2rem 2rem 0.2rem 0.5em;
+        box-sizing: border-box;
+    }
+
+    .entryTable .col2 {
+        position: relative;
+        border: 1px solid grey;
+        width: 24em;        
+    }
+
+        .entryTable input {
+            padding: 0.2rem 1rem 0.2rem 0.5em;
+            box-sizing: border-box;
+            border: none;
+            width: 100%;
+        }
+
+            .entryTable input:focus {
+                background-color: lightgoldenrodyellow;
+                outline: none;
+            }
+
+
+#errorLabel {
+    color: red;
+    position: relative;
+    min-height: 2em;
+}
+
+#msgLabel {
+    color: black;
+    position: relative;
+    min-height: 2em;
+}
+
+
+/* -------- Overlay with Option ListBox --------------- */
+
+#overlay {
+    position: absolute;
+    top: 90px;
+    left: 36px;
+    width: 275px;
+    height: 300px;
+    background-color: white;
+    opacity: 95%;
+    border: 1px solid lightgray;
+    border-radius: 3px;
+    display: none;
+}
+
+.listbox {
+    position: relative;
+    border: 1px solid lightgray;
+    border-radius: 3px;
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 0;
+    list-style: none;
+    margin: 0;
+}
+
+.listbox-item {
+    padding: 3px;
+    cursor: pointer;
+}
+
+    .listbox-item:hover,
+    .listbox-item:focus {
+        background-color: #e0e0e0;
+    }
+
+    .listbox-item.selected {
+        background-color: #007bff;
+        color: white;
+    }
+
+
+
+/* Styling of SELECT elements specific to IE */
+
+select {
+    position: relative;
+    width: 120px;
+    background-color: royalblue;
+    color: white;
+    margin: 0;
+    border: none;   
+}
+
+    option:not(:checked) {
+        color: red;
+    }
+
+    option:checked {
+        background-color: royalblue;
+        color: white;
+    }
+
+.outermask {
+    display: table-cell;
+    vertical-align: top;
+    position: relative;
+    width: 120px;
+    background-color: royalblue;
+    padding: 0;
+}
+
+.innermask {
+    position: relative;
+    top: 0;
+    left: 0;
+    margin: 0;
+    width: 95px;
+    padding: 7px;
+    overflow-x: hidden;
+    background-color: royalblue;
+}
+
+
+
+
+/*
+ * Uncomment this (and set NoDebug = false in labelentry.js) to view diagnostic info
+ *
+#debug {
+    position: relative;
+    display: block;
+    margin-top: 1em;
+    width: 100%;
+}
+
+#debugMsg {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    height: 60em;
+    margin: 1em;
+    width: 40%;
+    border: 1px solid grey;
+}
+
+#debugStatus {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    height: 60em;
+    margin: 1em;
+    width: 40%;
+    border: 1px solid grey;
+}
+
+*/
