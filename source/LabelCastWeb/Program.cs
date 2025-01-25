@@ -37,6 +37,8 @@ namespace LabelCastWeb
 
             // Initializing custom static configuration store:
 
+            // We always start in Debug log level, and once full configuration is read,
+            // it is set to what is contained in "Client.json" config file
             Logger.CurrentLogLevel = Level.Debug;
 
             // Start web app

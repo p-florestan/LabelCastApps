@@ -31,6 +31,8 @@ namespace LabelCastDesktop
         public App()
         {
             // Logging
+            // We always start in Debug log level, and once full configuration is read,
+            // it is set to what is contained in "Client.json" config file
             Logger.CurrentLogLevel = Level.Debug;
             Logger.CurrentLogFile = @"C:\Program Info\LabelCast\Logs\DesktopAppLog.txt";
             Logger.Write(Level.Notice, "");

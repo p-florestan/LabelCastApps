@@ -23,6 +23,7 @@ namespace LabelCast
 
         Printer? mActivePrinter = null;
 
+        // This is not currently used.
         // String mDefaultAdminCode = "9750";
 
         #endregion
@@ -162,16 +163,14 @@ namespace LabelCast
 
             Logger.Write(Level.Debug, "Reading client configuration");
 
-            String clientConf = Path.Join(mConfigPath, "Client.json");
-            if (File.Exists(clientConf))
+            String conf = Path.Join(mConfigPath, "Client.json");
+            if (File.Exists(conf))
             {
-                String content = clientConf.ReadToString();
+                String content = conf.ReadToString();
                 ClientConf = JsonConvert.DeserializeObject<Client>(content) ?? new Client();
             }
 
-            //if (String.IsNullOrWhiteSpace(ClientConfiguration.AdminCode))
-            //    ClientConfiguration.AdminCode = mDefaultAdminCode;
-
+            
             // Active  profile 
 
             if (String.IsNullOrWhiteSpace(ClientConf.ActiveProfile))
@@ -181,6 +180,7 @@ namespace LabelCast
             if (mActiveProfile == null)
                 mActiveProfile = ProfileList.FirstOrDefault();
 
+            
             // Active printer 
 
             if (String.IsNullOrWhiteSpace(ClientConf.ActivePrinter))
@@ -199,10 +199,10 @@ namespace LabelCast
                 SaveConfiguration();
             }
 
-            // diagnostics
-            Logger.Write(Level.Debug, "At the end of LabelConfig.ReadConfiguration: " +
-                "Printer Name: '" + mActivePrinter.Name + "', IP Address: " + mActivePrinter.IPAddress + ", port " + mActivePrinter.Port);
-            // end
+            
+            // Set current log level 
+
+            Logger.CurrentLogLevel = ClientConf.LogLevel;
 
         }
 

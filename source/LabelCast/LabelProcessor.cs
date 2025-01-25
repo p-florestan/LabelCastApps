@@ -70,8 +70,11 @@ namespace LabelCast
             DbQueryTimer.Enabled = false;
 
             // diagnostics
-            Logger.Write(Level.Debug, "At the end of constructor for LabelProcessor: " +
-                "Printer Name: '" + mPrinter.Name + "', IP Address: " + mPrinter.IPAddress + ", port " + mPrinter.Port);
+            Logger.Write(Level.Debug, "At the end of constructor for LabelProcessor: ");
+            if (mPrinter == null)
+                Logger.Write(Level.Debug, "No printer assigned (active printer is NULL)");
+            else
+                Logger.Write(Level.Debug, "Printer Name: '" + mPrinter.Name + "', IP Address: " + mPrinter.IPAddress + ", port " + mPrinter.Port);
             // end
         }
 
@@ -92,7 +95,7 @@ namespace LabelCast
         /// Printer associated with this LabelProcessor instance.
         /// (Profiles define a default printer, but users can modify.)
         /// </summary>
-        public Printer ActivePrinter
+        public Printer? ActivePrinter
         {
             get { return mPrinter; }
         }
