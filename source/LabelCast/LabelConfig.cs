@@ -114,14 +114,21 @@ namespace LabelCast
             String printerConf = Path.Join(mConfigPath, "Printers.json");
             if (File.Exists(printerConf))
             {
-                String content = printerConf.ReadToString();
-                List<Printer> printerList = JsonConvert.DeserializeObject<List<Printer>>(content) ?? new List<Printer>();
-                PrinterStore.Printers.Clear();
-                PrinterStore.SetPrinters(printerList);
+                try
+                {
+                    String content = printerConf.ReadToString();
+                    List<Printer> printerList = JsonConvert.DeserializeObject<List<Printer>>(content) ?? new List<Printer>();
+                    PrinterStore.Printers.Clear();
+                    PrinterStore.SetPrinters(printerList);
+                }
+                catch(Exception ex)
+                {
+                    Logger.Write(Level.Error, "Cannot read and import printer configuration file '" + printerConf + "': " + ex.Message);
+                }
             }
             else
             {
-                Logger.Write(Level.Debug, "Printer configuration file '" + printerConf + "' not found. Creating default printer.");
+                Logger.Write(Level.Notice, "Printer configuration file '" + printerConf + "' not found. Creating default printer.");
             }
             if (PrinterStore.Printers.Count == 0)
             {
@@ -147,11 +154,18 @@ namespace LabelCast
             {
                 foreach (String filePath in configFiles)
                 {
-                    String content = filePath.ReadToString();
-                    Profile? p = JsonConvert.DeserializeObject<Profile>(content);
-                    if (p != null)
+                    try
                     {
-                        ProfileList.Add(p);
+                        String content = filePath.ReadToString();
+                        Profile? p = JsonConvert.DeserializeObject<Profile>(content);
+                        if (p != null)
+                        {
+                            ProfileList.Add(p);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Write(Level.Error, "Cannot read and import profile '" + filePath + "': " + ex.Message);
                     }
                 }
             }
@@ -166,8 +180,15 @@ namespace LabelCast
             String conf = Path.Join(mConfigPath, "Client.json");
             if (File.Exists(conf))
             {
-                String content = conf.ReadToString();
-                ClientConf = JsonConvert.DeserializeObject<Client>(content) ?? new Client();
+                try
+                {
+                    String content = conf.ReadToString();
+                    ClientConf = JsonConvert.DeserializeObject<Client>(content) ?? new Client();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Write(Level.Error, "Cannot read and import client configuration file '" + conf + "': " + ex.Message);
+                }
             }
 
             
