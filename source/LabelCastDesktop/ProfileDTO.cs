@@ -43,6 +43,7 @@ namespace LabelCastDesktop
             this.DbTimeZone = p.DbTimeZone;
             this.SqlQuery = p.SqlQuery;
             this.SearchSqlQuery = p.SearchSqlQuery;
+            this.SqlQueryNumeric = p.SqlQueryNumeric;
             this.DisplayField = p.DisplayField;
 
             this.SearchFields = new List<string>(p.SearchFields);
@@ -127,9 +128,16 @@ namespace LabelCastDesktop
 
         [Category("Database"),
             Description("SQL query string to find items when wildcard symbol % is used."),
-            DisplayName("SQL Search Query")]
+            DisplayName("SQL Search - Main Query")]
         [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public String SearchSqlQuery { get; set; } = "";
+
+
+        [Category("Database"),
+            Description("SQL query string to find items with alternate numeric key (barcode etc)"),
+            DisplayName("SQL Query - Optional Numeric Code Query")]
+        [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
+        public String SqlQueryNumeric { get; set; } = "";
 
 
         [Category("Database"),
@@ -286,6 +294,7 @@ namespace LabelCastDesktop
                 DbTimeZone = this.DbTimeZone,
                 SqlQuery = this.SqlQuery,
                 SearchSqlQuery = this.SearchSqlQuery,
+                SqlQueryNumeric = this.SqlQueryNumeric,
 
                 SearchFields = new List<string>(this.SearchFields),
                 DataFields = new List<string>(this.DataFields),

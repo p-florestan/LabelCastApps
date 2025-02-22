@@ -96,6 +96,9 @@ namespace LabelCastDesktop
             this.Controls.Add(okButton);
             this.Controls.Add(cancelButton);
 
+            // Set the OK button as the default button
+            this.AcceptButton = okButton;
+
         }
 
         // When OK is clicked, store the IP address

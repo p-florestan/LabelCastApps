@@ -102,7 +102,8 @@ namespace LabelCast
 
         #endregion
 
-        #region Public API
+
+        #region Public API - Common
 
         /// <summary>
         /// Generate a DataTable representation of the fields which must be 
@@ -123,10 +124,10 @@ namespace LabelCast
                 fieldTable.Rows.Add(row);
             }
 
-            foreach (String searchField in mProfile.EditableFields)
+            foreach (String editField in mProfile.EditableFields)
             {
                 DataRow row = fieldTable.NewRow();
-                row[0] = searchField;
+                row[0] = editField;
                 row[1] = "";
                 fieldTable.Rows.Add(row);
             }
@@ -154,10 +155,18 @@ namespace LabelCast
             TestDatabaseConnection(mProfile);
         }
 
-        
+        public void ClearLabelDescriptor()
+        {
+            LabelDescriptor.ClearValues();
+        }
+
+        #endregion
+
+        #region Public API - Desktop App Only
+
         /// <summary>
         /// Process an edited value.<br/>
-        /// Optimized for Windows desktop app usage.<br/>
+        /// Intended for Windows desktop app usage.<br/>
         /// his method should be called every time a user has entered a value into 
         /// one of the editable fields.
         /// </summary>
@@ -168,10 +177,20 @@ namespace LabelCast
             if (mDescriptor.DbQueryFields.ContainsKey(varName))
             {
                 mDescriptor.DbQueryFields[varName] = value;
-                if (varName == mDescriptor.LastSearchField)
+                if (varName == mDescriptor.FirstSearchField && !String.IsNullOrWhiteSpace(mProfile.SqlQueryNumeric))
                 {
-                    Logger.Write(Level.Debug, " - detected that this is the last search variable");
-                    QueryDatabaseAsync();
+                    // If value is numeric, do alternate numeric query
+                    if (value.IsInteger())
+                    {
+                        Logger.Write(Level.Debug, " -- alternate numeric code query (on first search variable)");
+                        QueryDatabaseAsync(mProfile.SqlQueryNumeric, UseOnlyFirstQueryField:true);
+                    }
+                }
+                else if (varName == mDescriptor.LastSearchField)
+                {
+                    // regular database query
+                    Logger.Write(Level.Debug, " -- reqular database query (on last search variable)");
+                    QueryDatabaseAsync(mProfile.SqlQuery);
                 }
             }
             else if (mDescriptor.EditableFields.ContainsKey(varName))
@@ -197,7 +216,46 @@ namespace LabelCast
 
 
         /// <summary>
-        /// -- Web only -- <br/>
+        /// Search in database for a list of options when the user query contains wildcards
+        /// using SQLSearchQuery.<br/>
+        /// Intended for Windows desktop app usage.<br/>
+        /// This is a synchronous method, returning the full data for each option.
+        /// </summary>
+        public List<Dictionary<String, String>> DbWildcardQueryDesktop(Dictionary<String, String>? queryVars)
+        {
+            Logger.Write(Level.Notice, "DbWildcardQueryDesktop start.");
+            Logger.Write(Level.Debug, "Profile SearchSQLQuery = " + mProfile.SearchSqlQuery);
+
+            var dbResult = new List<Dictionary<string, string>>();
+            try
+            {
+                Logger.Write(Level.Debug, " - Query criteria: \r\n" + JsonConvert.SerializeObject(queryVars, Formatting.Indented));
+                if (queryVars == null)
+                    throw new ArgumentException("Query criteria empty.");
+                if (String.IsNullOrWhiteSpace(mProfile.SearchSqlQuery))
+                    throw new ArgumentException("Cannot search - no database search SQL query defined.");
+
+
+                var db = CreateDb(mProfile.DatabaseType);
+                dbResult = db.QueryListData(mProfile.SearchSqlQuery, queryVars, mDescriptor.DbResultFields);
+
+                Logger.Write(Level.Notice, "Database Query Success.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Write(Level.Debug, "Error - " + ex.Message);
+                throw;
+            }
+
+            return dbResult;
+        }
+
+        #endregion
+
+        #region Public API - Web App Only
+
+        /// <summary>
+        /// Web App Only Method.<br/>
         /// Process a single variable-value pair in a stateless manner, i.e. from an HTML page.<br/>
         /// Because the web demands that the client keep all state, the HTML client sends the entire
         /// label entry data every time, indicating which variable is currently edited.<br/>
@@ -218,14 +276,23 @@ namespace LabelCast
 
             if (mDescriptor.DbQueryFields.ContainsKey(editVar))
             {
-                if (editVar == mDescriptor.LastSearchField)
+                String editValue = mDescriptor.DbQueryFields[editVar];
+                if (editVar == mDescriptor.FirstSearchField && NumericQueryExists() && editValue.IsInteger())
+                {
+                    // Numeric code search
+                    // 
+                    // Note - this is another flow (a search flow) - so this check might not even belong here
+                    // To be finalized
+                    //
+                }
+                else if (editVar == mDescriptor.LastSearchField)
                 {
                     Logger.Write(Level.Debug, " - detected last search variable. Now quering database.");
-                    
+
                     // Any database related error will throw "DataException"
                     try
                     {
-                        msgResult = QueryDatabase();
+                        msgResult = QueryDatabaseWeb();
                     }
                     catch (Exception ex)
                     {
@@ -264,6 +331,7 @@ namespace LabelCast
 
 
         /// <summary>
+        /// Web App Only Method.<br/>
         /// Verifies that all required label data is filled out, including database results.<br/>
         /// If all is okay, sends the label to the printer.<br/>
         /// Otherwise, returns an error message.
@@ -301,15 +369,14 @@ namespace LabelCast
 
 
         /// <summary>
-        /// -- Web only -- <br/>
-        /// Query database for a list of options when the user query contains wildcards.
-        /// This does return the full data for each option.
+        /// Web App Only Method.<br/>
+        /// Search in database for a list of options when the user query contains wildcards
+        /// using SQLSearchQuery.<br/>
+        /// This is a synchronous method, returning the full data for each option.
         /// </summary>
-        public List<Dictionary<String, String>> QueryDatabaseOptionValues(Dictionary<String, String>? queryVars)
+        public List<Dictionary<String, String>> DbWildcardQueryWeb(Dictionary<String, String>? queryVars)
         {
-            Logger.Write(Level.Notice, "Database Option Values Query start.");
-
-            Logger.Write(Level.Debug, "Profile SQLQuery = " + mProfile.SqlQuery);
+            Logger.Write(Level.Notice, "DbWildcardQueryWeb start.");
             Logger.Write(Level.Debug, "Profile SearchSQLQuery = " + mProfile.SearchSqlQuery);
 
             var dbResult = new List<Dictionary<string, string>>();
@@ -336,22 +403,26 @@ namespace LabelCast
             return dbResult;
         }
 
+
         #endregion
 
-        #region Public Events
+
+        #region Public Events Raised by this Class
 
         public delegate void MessageEventHandler(object sender, MessageEventArgs e);
         public delegate void PrintCompleteEventHandler(object sender, EventArgs e);
+        public delegate void QueryCompleteEventHandler(object sender, DbQueryEventArgs e);
 
         public event MessageEventHandler? MessageEvent;
         public event PrintCompleteEventHandler? PrintCompleteEvent;
+        public event QueryCompleteEventHandler? DbQueryCompleteEvent;
 
         /// <summary>
         /// Event for notification messages.
         /// </summary>
         protected virtual void TriggerLabelMessageEvent(String message)
         {
-            Logger.Write(Level.Debug, "TriggerLabelMessage: " + message);
+            Logger.Write(Level.Debug, "LabelProcessor: TriggerLabelMessage: " + message);
             MessageEvent?.Invoke(this, new MessageEventArgs(message));
         }
 
@@ -361,12 +432,21 @@ namespace LabelCast
         /// </summary>
         protected virtual void TriggerPrintCompleteEvent()
         {
-            Logger.Write(Level.Debug, "TriggerPrintCompleteEvent");
+            Logger.Write(Level.Debug, "LabelProcessor: TriggerPrintCompleteEvent");
             PrintCompleteEvent?.Invoke(this, EventArgs.Empty);
         }
 
-        #endregion
 
+        /// <summary>
+        /// Event fired when database query is complete to transmit result.
+        /// </summary>
+        protected virtual void TriggerQueryCompleteEvent(Dictionary<String, String> dbResult)
+        {
+            Logger.Write(Level.Debug, "LabelProcessor: TriggerQueryCompleteEvent");
+            DbQueryCompleteEvent?.Invoke(this, new DbQueryEventArgs(dbResult));
+        }
+
+        #endregion
 
         #region Internal Data Processing Methods
 
@@ -376,7 +456,7 @@ namespace LabelCast
         /// It should be called when the variables required to filter the query
         /// from the database has been filled out. 
         /// </summary>
-        private async void QueryDatabaseAsync()
+        private async void QueryDatabaseAsync(String sqlQuery, bool UseOnlyFirstQueryField = false)
         {
             Logger.Write(Level.Debug, "Database Query start.");
             mDescriptor.DataQueryStatus = DbQueryStatus.Pending;
@@ -385,15 +465,16 @@ namespace LabelCast
             {
                 try
                 {
-                    Logger.Write(Level.Debug, "DbTask: Query criteria = " + JsonConvert.SerializeObject(mDescriptor.DbQueryFields, Formatting.Indented));
-
+                    Dictionary<String, String> queryCriteria = GetQueryCriteria(UseOnlyFirstQueryField);
                     Dictionary<String, String> dbResult = new Dictionary<string, string>();
 
                     var db = CreateDb(mProfile.DatabaseType);
-                    dbResult = db.QueryData(mProfile.SqlQuery, mDescriptor.DbQueryFields, mDescriptor.DbResultFields);
+                    dbResult = db.QueryData(sqlQuery, queryCriteria, mDescriptor.DbResultFields);
 
                     mDescriptor.UpdateDescriptorDbResult(DbQueryStatus.Success, dbResult);
                     Logger.Write(Level.Debug, "DbTask: Updated Descriptor after query:\r\n" + JsonConvert.SerializeObject(mDescriptor, Formatting.Indented));
+                    
+                    TriggerQueryCompleteEvent(dbResult);
 
                     return "";
                 }
@@ -413,6 +494,24 @@ namespace LabelCast
             }
         }
 
+        private Dictionary<string, string> GetQueryCriteria(bool useOnlyFirstQueryField)
+        {
+            Dictionary<String, String> queryCriteria = new Dictionary<String, String>();
+            
+            int idx = 1;
+            foreach(var entry in mDescriptor.DbQueryFields)
+            {
+                if (useOnlyFirstQueryField == false || idx == 1)
+                {
+                    queryCriteria.Add(entry.Key, entry.Value);
+                    idx++;
+                }
+            }
+
+            Logger.Write(Level.Debug, "DbTask: Query criteria = " + JsonConvert.SerializeObject(mDescriptor.DbQueryFields, Formatting.Indented));
+            return queryCriteria;
+        }
+
 
         /// <summary>
         /// -- Web only -- <br/>
@@ -421,7 +520,7 @@ namespace LabelCast
         /// It should be called when the variables required to filter the query
         /// from the database has been filled out. 
         /// </summary>
-        private String QueryDatabase()
+        private String QueryDatabaseWeb()
         {
             Logger.Write(Level.Notice, "Database Query start.");
             mDescriptor.DataQueryStatus = DbQueryStatus.Pending;
@@ -506,7 +605,7 @@ namespace LabelCast
             // Validation
 
             if (mPrinter == null)
-            {               
+            {
                 Logger.Write(Level.Error, "Cannot print: no active printer defined.");
                 return "Cannot print: no active printer defined.";
             }
@@ -577,7 +676,7 @@ namespace LabelCast
                 return "";
             }
             catch (Exception ex)
-            {                
+            {
                 return "Cannot print label to '" + mPrinter.Name + "': " + ex.Message;
             }
         }
@@ -609,13 +708,24 @@ namespace LabelCast
             TriggerLabelMessageEvent(message);
         }
 
+
+        /// <summary>
+        /// Checks whether a Numeric-Search-SQL-query exists.
+        /// This indicates that the alternate numeric search (searching by barcode or other
+        /// numeric ID) is enabled.
+        /// </summary>
+        private Boolean NumericQueryExists()
+        {
+            return (!String.IsNullOrWhiteSpace(mProfile.SqlQueryNumeric));
+        }
+
         #endregion
 
         #region Database Factory
 
         private DbWrapperBase CreateDb(DBType DatabaseType)
         {
-            switch(DatabaseType)
+            switch (DatabaseType)
             {
                 case DBType.SQLite:
                     return new DbWrapperSQLite(mProfile.DbConnectionString, mProfile.DbTimeZone);
@@ -660,6 +770,19 @@ namespace LabelCast
             this.Printers = printers;
         }
     }
+
+    public class DbQueryEventArgs : EventArgs
+    {
+        public Dictionary<String, String> DbResult { get; set; } = new Dictionary<String, String>();
+
+        public DbQueryEventArgs() { }
+
+        public DbQueryEventArgs(Dictionary<String, String> dbResult)
+        {
+            this.DbResult = dbResult;
+        }
+    }
+
 
     #endregion
 

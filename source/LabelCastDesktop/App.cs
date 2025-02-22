@@ -40,8 +40,7 @@ namespace LabelCastDesktop
 
             // Decouple initialization
             var initTimer = new System.Timers.Timer { AutoReset = false, Interval = 10 };
-            initTimer.Elapsed += InitTimer_Elapsed;
-            initTimer.Start();            
+            Task.Run(InitializeApp);
         }
 
         #endregion
@@ -49,12 +48,13 @@ namespace LabelCastDesktop
         #region Initialization
 
         /// <summary>
-        /// When the startup timer elapses we initialize the application.
+        /// Initialize the application. This should be run deferred, in a background task.
         /// </summary>
-        private void InitTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+        private void InitializeApp()
         {
             mConf = new LabelConfig();
-            mConf.ReadConfiguration();
+            String confMessage = mConf.ReadConfiguration();
+            // Any messages get shown at the end of this method 
 
             mActiveProfile = mConf.ActiveProfile;
             mActivePrinter = mConf.ActivePrinter;
@@ -69,6 +69,7 @@ namespace LabelCastDesktop
                 mLabelProcessor = new LabelProcessor(mActiveProfile, mActivePrinter);
                 mLabelProcessor.MessageEvent += OnLabelPrintMessage;
                 mLabelProcessor.PrintCompleteEvent += OnLabelPrintComplete;
+                mLabelProcessor.DbQueryCompleteEvent += OnDbQueryComplete;
                 mLabelProcessor.InitializeDatabase();
                 mFieldTable = mLabelProcessor.GetFieldTable();
             }
@@ -80,29 +81,45 @@ namespace LabelCastDesktop
             }
 
             TriggerProfileUpdate();
+
+            // Show configuration error message at the end, to supersede
+            // any other messages.
+            if (!String.IsNullOrEmpty(confMessage))
+            {
+                TriggerAppMessageEvent(confMessage);
+                Thread.Sleep(2000);
+                TriggerAppMessageEvent(confMessage);
+                Thread.Sleep(5000);
+                TriggerAppMessageEvent(confMessage);
+            }
         }
 
         #endregion
 
-        #region Events for Windows Form 
+        #region Events Raised by this Class
 
         public delegate void MessageEventHandler(object sender, MessageEventArgs e);
         public delegate void ProfileEventHandler(object sender, ProfileEventArgs e);
         public delegate void LabelEventHandler(object sender, EventArgs e);
         public delegate void LabelPrintCompleteEventHandler(object sender, EventArgs e);
+        public delegate void QueryCompleteEventHandler(object sender, DbQueryEventArgs e);
 
         public event MessageEventHandler? MessageEvent;
         public event ProfileEventHandler? ProfileEvent;
         public event LabelEventHandler? LabelEvent;
         public event LabelPrintCompleteEventHandler? LabelPrintCompleteEvent;
+        public event QueryCompleteEventHandler? QueryCompleteEvent;
 
         /// <summary>
         /// Event for notification messages.
         /// </summary>
         protected virtual void TriggerAppMessageEvent(String message)
         {
-            Logger.Write(Level.Debug, "TriggerAppMessage: " + message);
-            MessageEvent?.Invoke(this, new MessageEventArgs(message));
+            if (!String.IsNullOrWhiteSpace(message))
+            {
+                Logger.Write(Level.Debug, "TriggerAppMessage: " + message);
+                MessageEvent?.Invoke(this, new MessageEventArgs(message));
+            }
         }
 
         /// <summary>
@@ -114,6 +131,7 @@ namespace LabelCastDesktop
             Logger.Write(Level.Debug, "TriggerLabelPrintComplete");
             LabelPrintCompleteEvent?.Invoke(this, EventArgs.Empty);
         }
+
 
         /// <summary>
         /// Event for update profile updates (including printers).<br/>
@@ -135,18 +153,42 @@ namespace LabelCastDesktop
             LabelEvent?.Invoke(this, EventArgs.Empty);
         }
 
+
         /// <summary>
-        /// This method is invoked when an event from the BarcodeLabel class is fired.
-        /// It should in turn trigger the message event on the WinForm.
+        /// Fires when a label has completed printing (i.e. data was sent to the printer).
         /// </summary>
+        /// <param name="message"></param>
+        protected virtual void TriggerDbQueryCompleteEvent(Dictionary<String, String> dbResult)
+        {
+            Logger.Write(Level.Debug, "TriggerDbQueryComplete");
+            QueryCompleteEvent?.Invoke(this, new DbQueryEventArgs(dbResult));
+        }
+
+        #endregion
+
+        #region Events Received From Downstream Classes (LabelProcessor)
+
+        // These are event handlers which the App class has subscribed to, and which are raised
+        // in other classes - in all these cases here, they are raised by LabelProcessor class.
+        // The App class does not handle the events, we instead raise a new event
+        // which the WinForm can subscribe to and react.
+
         private void OnLabelPrintMessage(object sender, LabelCast.MessageEventArgs e)
         {
+            // Cascade event further
             TriggerAppMessageEvent(e.Message);
         }
 
         private void OnLabelPrintComplete(object sender, EventArgs e)
         {
+            // Cascade event further
             TriggerPrintCompleteEvent();
+        }
+
+        private void OnDbQueryComplete(object sender, DbQueryEventArgs e)
+        {
+            // Cascade event further
+            TriggerDbQueryCompleteEvent(e.DbResult);
         }
 
 
@@ -174,13 +216,54 @@ namespace LabelCastDesktop
         #region Public API
 
         /// <summary>
+        /// Update the field-table DataTable objects with a column-value pair dictionary
+        /// from the database query.
+        /// </summary>
+        /// <param name="valueList">Column-value pairs representing table data.</param>
+        public void UpdateFieldTable(Dictionary<String, String> dataValues)
+        {
+            if (mActiveProfile == null)
+                return;
+            if (dataValues == null || dataValues.Count == 0)
+                return;
+
+            // The sequence in FieldTable is: first DbQueryFields, then EditFields
+
+            // Update dbQuery fields where possible
+            foreach (String searchField in mActiveProfile.SearchFields)
+            {
+                if (dataValues.ContainsKey(searchField))
+                {
+                    int idx = LocateMatchingRow(mFieldTable, searchField);
+                    if (idx >= 0)
+                        mFieldTable.Rows[idx]["Value"] = dataValues[searchField];
+                }
+            }
+
+            // Also update EditFields where possible
+            // (Will only update those EditFields which also exist in DbResultFields
+            // and thus were returned by database query)
+            foreach (String editField in mActiveProfile.EditableFields)
+            {
+                if (dataValues.ContainsKey(editField))
+                {
+                    int idx = LocateMatchingRow(mFieldTable, editField);
+                    if (idx >= 0)
+                        mFieldTable.Rows[idx]["Value"] = dataValues[editField];
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Save temporary profile configuration as modified on PropertyGrid on the Form.
         /// This also saves printer data at the same time. 
         /// </summary>
         public String SaveConfiguration(List<Profile> profileList, List<Printer> printerList)
         {
-            mConf.ProfileList = profileList;
+            mConf.UpdateProfileList(profileList);
             PrinterStore.ReplaceAllPrinters(printerList);
+
             String message = mConf.SaveConfiguration();
             if (!String.IsNullOrWhiteSpace(message))
             {
@@ -295,6 +378,31 @@ namespace LabelCastDesktop
         public String GetActivePrinterName()
         {
             return mActivePrinter?.Name ?? String.Empty;
+        }
+
+        #endregion
+
+        #region Internal Methods
+
+        /// <summary>
+        /// Locate row index of matching field in fieldTable, if any.
+        /// </summary>
+        private int LocateMatchingRow(DataTable fieldTable, string fieldName)
+        {
+            // Columns of fieldTable: Variable, Value
+            if (!fieldTable.Columns.Contains("Variable") || !fieldTable.Columns.Contains("Value"))
+                throw new ApplicationException("Internal Error: App FieldTable has invalid structure - must have columns 'Variable' and 'Value'.");
+
+            int idx = -1;
+            for (int n = 0; n < fieldTable.Rows.Count; n++)
+            {
+                if (fieldTable.Rows[n]["Variable"].ToString() == fieldName)
+                {
+                    idx = n;
+                    break;
+                }
+            }
+            return idx;
         }
 
         #endregion

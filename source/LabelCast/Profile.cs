@@ -46,6 +46,7 @@ namespace LabelCast
         public String DbTimeZone { get; set; } = "";
         public String SqlQuery { get; set; } = "";
         public String SearchSqlQuery { get; set; } = "";
+        public String SqlQueryNumeric { get; set; } = "";
         public String DisplayField { get; set; } = "";
 
 

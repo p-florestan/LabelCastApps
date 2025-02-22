@@ -103,9 +103,10 @@ namespace LabelCast
         /// <summary>
         /// Read all configuration profiles from files on disk.
         /// </summary>
-        public void ReadConfiguration()
+        public String ReadConfiguration()
         {
             bool noConfig = false;
+            String msgResult = "";
 
             // 1. Read printer configuration from JSON file
 
@@ -220,11 +221,14 @@ namespace LabelCast
                 SaveConfiguration();
             }
 
-            
+            if (ResultFieldsIncludeSearchFields() == false)
+                msgResult = "Invalid config: Data field list MUST include all search-fields.";
+
             // Set current log level 
 
             Logger.CurrentLogLevel = ClientConf.LogLevel;
 
+            return msgResult;
         }
 
 
@@ -290,6 +294,23 @@ namespace LabelCast
             return "";
         }
 
+
+        /// <summary>
+        /// Update profile list. Used when user edits profiles in the UI.
+        /// We also need to set the active profile again, to ensure proper validation.
+        /// </summary>
+        public void UpdateProfileList(List<Profile> profileList)
+        {
+            String activeProfileAbbrev = mActiveProfile?.Abbreviation ?? "";
+            this.ProfileList = profileList;
+            if (this.ProfileList.Count > 0)
+            {
+                mActiveProfile = this.ProfileList.FirstOrDefault(p => p.Abbreviation == activeProfileAbbrev);
+                if (mActiveProfile == null)
+                    mActiveProfile = this.ProfileList[0];
+            }
+        }
+
         #endregion
 
         #region Internal Helper Methods
@@ -308,6 +329,8 @@ namespace LabelCast
                 msgResult = "Cannot save configuration - profile abbreviations must be unique.";
             else if (!PrinterNamesUnique())
                 msgResult = "Cannot save configuration - printer names must be unique.";
+            else if (!ResultFieldsIncludeSearchFields())
+                msgResult = "Cannot save configuration - data-field list MUST include all search-fields.";
             else
             {
                 msgResult = VerifyLabelTemplates();
@@ -320,6 +343,33 @@ namespace LabelCast
             return msgResult;
         }
 
+
+        /// <summary>
+        /// Check whether every single of the SearchField variables is contained in the 
+        /// DataField list.<br/>
+        /// The significance of this is that the SELECT clause of all SQL queries MUST ALWAYS contain 
+        /// the SearchField variables as well. (This isn't necessary for all scenarios but it is 
+        /// simpler to require it always rather than distinguishing myriad special cases.)
+        /// </summary>
+        /// <returns></returns>
+        private bool ResultFieldsIncludeSearchFields()
+        {
+            if (mActiveProfile == null)
+                return true;
+
+            bool isIncluded = true;
+            foreach (String searchField in mActiveProfile.SearchFields)
+            {
+                if (!mActiveProfile.DataFields.Contains(searchField))
+                {
+                    Logger.Write(Level.Debug, "Search field '" + searchField + "' not included in DataFields.");
+                    isIncluded = false;
+                    break;
+                }
+            }
+
+            return isIncluded;
+        }
 
         private void SaveAllProfiles()
         {
@@ -623,7 +673,7 @@ namespace LabelCast
 
         #endregion
 
-}
+    }
 
 
 #region Custom JSON Converter Classes 

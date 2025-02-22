@@ -41,9 +41,17 @@ namespace LabelCast
         /// </summary>
         public LabelDescriptor(Profile profile)
         {
+            bool isFirst = true;
             foreach (String searchField in profile.SearchFields)
             {
                 this.DbQueryFields.Add(searchField, "");
+
+                if (isFirst)
+                {
+                    this.FirstSearchField = searchField;
+                    isFirst = false;
+                }
+
                 this.LastSearchField = searchField;
             }
 
@@ -80,12 +88,25 @@ namespace LabelCast
         /// </summary>
         public Dictionary<String, String> EditableFields { get; set; } = new Dictionary<String, String>();
 
+        /// <summary>
+        /// Read-only property to obtain the index of the first edit field.<br/>
+        /// This is from the viewpoint of the "FieldTable" object created for the UI which
+        /// shows DbQueryFields and EditFields and then LabelCount field. This index is the
+        /// first field after the DbQueryFields.
+        /// </summary>
+        public int FirstEditFieldIndex {  get { return DbQueryFields.Count; } }
+            
 
 
         /// <summary>
         /// Name of currently edited field in user input.
         /// </summary>
         public String CurrentEditField { get; set; } = "";
+
+        /// <summary>
+        /// Key of first (top) entry in DbQueryFields. Used for numeric search queries only.
+        /// </summary>
+        public String FirstSearchField { get; set; } = "";
 
         /// <summary>
         /// Key of last (bottom) entry in DbQueryFields. When multiple DbQueryFields exist, 
@@ -200,6 +221,7 @@ namespace LabelCast
             String InvalidKey = "";
             lock (this)
             {
+                // Update DbResultFields
                 foreach (var key in this.DbResultFields.Keys)
                 {
                     // validate columns
@@ -207,6 +229,22 @@ namespace LabelCast
                         InvalidKey = key;
                     else
                         this.DbResultFields[key] = dbResult[key];
+                }
+
+                // Also update EditFields (some might be both EditField and DbResultField)
+                foreach (var key in this.EditableFields.Keys)
+                {
+                    if (dbResult.ContainsKey(key))                        
+                        this.EditableFields[key] = dbResult[key];
+                }
+
+                // Finally, also update DbQueryFields - these are mandated to be in DbResult
+                // and if a numeric query was done, only a number is there, none are filled out
+                // with what the item would have been:
+                foreach (var key in this.DbQueryFields.Keys)
+                {
+                    if (dbResult.ContainsKey(key))
+                        this.DbQueryFields[key] = dbResult[key];
                 }
 
                 if (String.IsNullOrEmpty(InvalidKey))
@@ -268,6 +306,31 @@ namespace LabelCast
                 throw new ApplicationException("Label Field mismatch:\r\n" + errorMsg);
 
             return zpl;
+        }
+
+        public void ClearValues()
+        {
+            foreach(String key in DbQueryFields.Keys)
+            {
+                DbQueryFields[key] = "";
+            }
+
+            foreach (String key in DbResultFields.Keys)
+            {
+                DbResultFields[key] = "";
+            }
+
+            foreach (String key in EditableFields.Keys)
+            {
+                EditableFields[key] = "";
+            }
+
+            CurrentEditField = "";
+            DataQueryStatus = DbQueryStatus.NoQuery;
+            DataQueryStatusText = "";
+            LabelCount = 1;
+            ReadyToPrint = false;
+            ErrorMessage = "";
         }
 
         #endregion

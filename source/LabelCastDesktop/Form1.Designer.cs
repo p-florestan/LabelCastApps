@@ -46,6 +46,8 @@
             btnDeleteProfile = new Button();
             comboProfiles = new ComboBox();
             tabLabel = new TabPage();
+            txtLabelValues = new TextBox();
+            btnClear = new Button();
             label2 = new Label();
             label1 = new Label();
             comboActivePrinter = new ComboBox();
@@ -247,6 +249,8 @@
             // 
             // tabLabel
             // 
+            tabLabel.Controls.Add(txtLabelValues);
+            tabLabel.Controls.Add(btnClear);
             tabLabel.Controls.Add(label2);
             tabLabel.Controls.Add(label1);
             tabLabel.Controls.Add(comboActivePrinter);
@@ -261,6 +265,25 @@
             tabLabel.TabIndex = 2;
             tabLabel.Text = "Label-Print";
             tabLabel.UseVisualStyleBackColor = true;
+            // 
+            // txtLabelValues
+            // 
+            txtLabelValues.Font = new Font("Lucida Console", 9F, FontStyle.Regular, GraphicsUnit.Point, 0);
+            txtLabelValues.Location = new Point(8, 369);
+            txtLabelValues.Multiline = true;
+            txtLabelValues.Name = "txtLabelValues";
+            txtLabelValues.Size = new Size(483, 157);
+            txtLabelValues.TabIndex = 9;
+            // 
+            // btnClear
+            // 
+            btnClear.Location = new Point(416, 532);
+            btnClear.Name = "btnClear";
+            btnClear.Size = new Size(75, 23);
+            btnClear.TabIndex = 8;
+            btnClear.Text = "Clear";
+            btnClear.UseVisualStyleBackColor = true;
+            btnClear.Click += btnClear_Click;
             // 
             // label2
             // 
@@ -304,10 +327,11 @@
             dataGridPrint.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridPrint.Location = new Point(6, 86);
             dataGridPrint.Name = "dataGridPrint";
-            dataGridPrint.Size = new Size(485, 456);
+            dataGridPrint.Size = new Size(485, 277);
             dataGridPrint.TabIndex = 3;
             dataGridPrint.CellEndEdit += dataGridPrint_CellEndEdit;
             dataGridPrint.CellEnter += dataGridPrint_CellEnter;
+            dataGridPrint.CellLeave += dataGridPrint_CellLeave;
             dataGridPrint.SelectionChanged += dataGridPrint_SelectionChanged;
             dataGridPrint.KeyUp += dataGridPrint_KeyUp;
             // 
@@ -472,5 +496,7 @@
         private Label label2;
         private Label label1;
         private ComboBox comboActivePrinter;
+        private Button btnClear;
+        private TextBox txtLabelValues;
     }
 }

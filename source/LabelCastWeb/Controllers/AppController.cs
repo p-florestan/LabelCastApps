@@ -235,7 +235,7 @@ namespace LabelCastWeb.Controllers
                 var labelProcessor = new LabelProcessor(activeProfile, null); // printer param not required here
 
                 var queryVars = JsonConvert.DeserializeObject<Dictionary<string, string>>(query);
-                var optionList = labelProcessor.QueryDatabaseOptionValues(queryVars);
+                var optionList = labelProcessor.DbWildcardQueryWeb(queryVars);
 
                 return StatusCode(200, JsonConvert.SerializeObject(optionList));
             }

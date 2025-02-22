@@ -8,8 +8,8 @@ using System.Reflection;
 using System.Timers;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using System.ComponentModel;
 using LabelCast;
-using System.Diagnostics.Eventing.Reader;
 
 
 namespace LabelCastDesktop
@@ -28,7 +28,6 @@ namespace LabelCastDesktop
 
         private bool mIsInitializing = false;
         int mCurrentRow = 0;
-        private System.Timers.Timer EndEditTimer;
 
         #endregion
 
@@ -43,6 +42,7 @@ namespace LabelCastDesktop
             mApp.ProfileEvent += OnProfileUpdate;
             mApp.LabelEvent += OnLabelUpdate;
             mApp.LabelPrintCompleteEvent += LabelPrintCompleteEvent;
+            mApp.QueryCompleteEvent += OnDbQueryComplete;
             //
             mProfileList = new List<ProfileDTO>();
             mACtivePrinterList = new List<PrinterDTO>();
@@ -59,11 +59,6 @@ namespace LabelCastDesktop
             dataGridPrint.BackgroundColor = Color.White;
             dataGridPrint.DefaultCellStyle.SelectionBackColor = Color.LightGoldenrodYellow;
             dataGridPrint.DefaultCellStyle.SelectionForeColor = Color.Black;
-
-            EndEditTimer = new System.Timers.Timer(100);
-            EndEditTimer.AutoReset = false;
-            EndEditTimer.Enabled = false;
-            EndEditTimer.Elapsed += EndEditTimer_Elapsed;
 
             panelBtm.Location = new Point(0, 566);
 
@@ -92,10 +87,8 @@ namespace LabelCastDesktop
 
 
         /// <summary>
-        /// 
+        /// Profile update event
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void OnProfileUpdate(object sender, ProfileEventArgs e)
         {
             Logger.Write(Level.Debug, "OnUpdateProfiles event fired (" + e.Profiles.Count + " profiles to be updated).");
@@ -105,6 +98,27 @@ namespace LabelCastDesktop
             else
                 UpdateProfiles(e);
         }
+
+
+        /// <summary>
+        /// This event occurs when a database query has been completed.
+        /// </summary>
+        private void OnDbQueryComplete(object sender, DbQueryEventArgs e)
+        {
+            Logger.Write(Level.Debug, "Form: DbQueryComplete event fired: updating FieldTable and refreshing grid.");
+            dataGridPrint.BeginInvoke(new Action(() =>
+            {
+                mApp.UpdateFieldTable(e.DbResult);
+                dataGridPrint.Refresh();
+
+                var desc = mApp.BarcodeLabelProcessor?.LabelDescriptor;
+                if (desc != null)
+                {
+                    ShowLabelValues(desc);
+                }
+            }));
+        }
+
 
 
         /// <summary>
@@ -127,12 +141,12 @@ namespace LabelCastDesktop
         private void UpdateProfiles(ProfileEventArgs e)
         {
             // Profile list from the App event is a deep copy
-            mProfileList = e.Profiles.Select(p => new ProfileDTO(p)).ToList();            
+            mProfileList = e.Profiles.Select(p => new ProfileDTO(p)).ToList();
             RefreshProfileCombo();
             ConfigureLabelPrinting();
 
             // This is a reference to PrinterStore.Printers (global object)
-            mACtivePrinterList = e.Printers.Select(p => new PrinterDTO(p)).ToList();            
+            mACtivePrinterList = e.Printers.Select(p => new PrinterDTO(p)).ToList();
             RefreshPrinterCombo();
 
             // Update combos on the LabelPrint tab
@@ -179,7 +193,7 @@ namespace LabelCastDesktop
                     comboPrinters.SelectedIndex = 0;
                 else
                     comboPrinters.SelectedItem = activePrinterName;
-            }                
+            }
         }
 
 
@@ -238,6 +252,7 @@ namespace LabelCastDesktop
 
         private void LabelPrintCompleteEvent(object sender, EventArgs e)
         {
+            Thread.Sleep(1000);
             ClearInputValues();
         }
 
@@ -399,9 +414,9 @@ namespace LabelCastDesktop
         /// </summary>
         private void btnPrinterSave_Click(object sender, EventArgs e)
         {
-            List<Profile> profiles = mProfileList.Select(p => p.ToProfile()).ToList();            
+            List<Profile> profiles = mProfileList.Select(p => p.ToProfile()).ToList();
             List<Printer> printers = mACtivePrinterList.Select(p => p.ToPrinter()).ToList();
-            
+
             String msgResult = mApp.SaveConfiguration(profiles, printers);
             MsgLabel.Text = msgResult;
 
@@ -429,6 +444,11 @@ namespace LabelCastDesktop
         #endregion
 
         #region Form Control Event Handlers - LabelPrint tab
+
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            ClearInputValues();
+        }
 
 
         private void comboActiveProfile_SelectedIndexChanged(object sender, EventArgs e)
@@ -482,19 +502,49 @@ namespace LabelCastDesktop
         /// </summary>
         private void dataGridPrint_CellEndEdit(object sender, DataGridViewCellEventArgs e)
         {
-            // We decouple the processing from the event - 
-            // because EndEdit also gets called when user moves away from the TabPage,
-            // (e.g. to edit profiles) and that must not trigger a database query
+            Logger.Write(Level.Debug, "CellEndEdit: row " + dataGridPrint.CurrentCell.RowIndex + " col " + dataGridPrint.CurrentCell.ColumnIndex);
+            // Async processing
             mCurrentRow = e.RowIndex;
-            EndEditTimer.Start();
+            Task.Run(HandleCellEndEditAsync);
         }
 
+        private void dataGridPrint_CellLeave(object sender, DataGridViewCellEventArgs e)
+        {
+            /*
+             * This code is intended to move the focus down below to the first Edit-Field
+             * instead of to the next DbQuery field for NUMERIC queries.
+             * 
+             * But it does not work - this seems to already move the focus down and so the
+             * actual data query in CellEndEdit is in another row and does not detect that a
+             * numeric query is needed
+             * 
+             * Put all this EndEdit stuff into CellLeave??
+             * 
+            Logger.Write(Level.Debug, "CellLeave: row " + dataGridPrint.CurrentCell.RowIndex + " col " + dataGridPrint.CurrentCell.ColumnIndex + "cell value (uncommitted + formatted) = " + dataGridPrint.CurrentCell.EditedFormattedValue.ToString());
+            if (mApp.BarcodeLabelProcessor == null)
+                return;
+            String varName = dataGridPrint.Rows[mCurrentRow].Cells[0].Value?.ToString() ?? "";
+            String value = dataGridPrint.CurrentCell.EditedFormattedValue.ToString() ?? "";
+
+            if (IsNumericSearch(varName, value))
+            {
+                Logger.Write(Level.Debug, "CellLeave: numeric search - move cursor to first EditField");
+                dataGridPrint.BeginInvoke(new Action(() =>
+                {
+                    int firstEditCellIndex = mApp.BarcodeLabelProcessor.LabelDescriptor.FirstEditFieldIndex;                    
+                    dataGridPrint.CurrentCell = dataGridPrint[1, firstEditCellIndex];
+                }));
+            }
+            */
+        }
 
         /// <summary>
         /// Ensuring caret is showing when an edit field is entered
         /// </summary>
         private void dataGridPrint_CellEnter(object sender, DataGridViewCellEventArgs e)
         {
+            Logger.Write(Level.Debug, "CellEnter: row " + dataGridPrint.CurrentCell.RowIndex + " col " + dataGridPrint.CurrentCell.ColumnIndex);
+
             if (e.RowIndex > 0)
             {
                 dataGridPrint.BeginEdit(true);
@@ -503,31 +553,175 @@ namespace LabelCastDesktop
 
 
         /// <summary>
-        /// Process EndEdit event of the DataGridView control (deferred by timer)
+        /// Process EndEdit event of the DataGridView control.<br/>
+        /// This method should be called from a background task.
         /// </summary>
-        private void EndEditTimer_Elapsed(object? sender, ElapsedEventArgs e)
+        private void HandleCellEndEditAsync()
         {
-            if (dataGridPrint.InvokeRequired)
+            if (mApp.BarcodeLabelProcessor == null)
+                return;
+
+            // This is always requring Invoke
+            dataGridPrint.BeginInvoke(new Action(() =>
             {
-                dataGridPrint.Invoke(new Action(() =>
+                // Ensure EndEdit is not called due to leaving "tabLabel" tab
+                if (tabControl1.SelectedTab?.Name == "tabLabel")
                 {
-                    if (tabControl1.SelectedTab?.Name == "tabLabel")
+                    MsgLabel.Text = "";
+                    String varName = dataGridPrint.Rows[mCurrentRow].Cells[0].Value?.ToString() ?? "";
+                    String value = dataGridPrint.Rows[mCurrentRow].Cells[1].Value?.ToString() ?? "";
+
+                    try
                     {
-                        MsgLabel.Text = "";
-
-                        String varName = dataGridPrint.Rows[mCurrentRow].Cells[0].Value?.ToString() ?? "";
-                        String value = dataGridPrint.Rows[mCurrentRow].Cells[1].Value?.ToString() ?? "";
-
-                        if (mApp.BarcodeLabelProcessor != null)
+                        /*
+                        if (IsNumericSearch(varName, value))
                             mApp.BarcodeLabelProcessor.EditFieldValue(varName, value);
+
+                        else if (IsWildCardSearch(varName, value))
+                            DoWildCardSearch(varName, value);
+
                         else
-                            Logger.Write(Level.Error, "Internal Error - LabelProcessor is null in EndEditTimer_Elapsed");
+                        {
+                            mApp.BarcodeLabelProcessor.EditFieldValue(varName, value);
+                            ShowLabelValues(mApp.BarcodeLabelProcessor.LabelDescriptor);
+                        }
+                        */
+
+                        // Simplified 
+                        // for testing 
+                        if (IsWildCardSearch(varName, value))
+                        {
+                            DoWildCardSearch(varName, value);
+                        }
+                        else
+                        {
+                            mApp.BarcodeLabelProcessor.EditFieldValue(varName, value);
+                            ShowLabelValues(mApp.BarcodeLabelProcessor.LabelDescriptor);
+                        }
                     }
-                    else
-                        Logger.Write(Level.Debug, "DataGridPrint EndEdit event fired due to moving away from LabelPrint tab. Not taking any action.");
-                }));
+                    catch (Exception ex)
+                    {
+                        OnAppMessage(this, new MessageEventArgs { Message = "Error editing cell: " + ex.Message });
+                    }
+                }
+            }));
+        }
+
+
+        /// <summary>
+        /// Check whether to perform numeric search.
+        /// </summary>
+        private bool IsNumericSearch(String varName, String value)
+        {
+            if (mApp.BarcodeLabelProcessor == null)
+                return false;
+            String firstSearchField = mApp.BarcodeLabelProcessor.LabelDescriptor.FirstSearchField;
+            return (varName == firstSearchField && NumericQueryExists() && value.IsInteger());
+        }
+
+
+        /*
+         * Apparently not necessary
+         * Done directly in LabelProcessor.EditFieldValue()
+         * 
+        /// <summary>
+        /// Perform numeric search (searching by alternate numeric code, such as barcode etc.)
+        /// </summary>
+        private void DoNumericSearch(String varName, String value)
+        {
+            // Numeric Search
+            Logger.Write(Level.Debug, "** CellEdit: Numeric search (not yet implemented)");
+
+
+            // probably we should call single-result type QueryData method in DbWrapper?
+
+            // Ensure label descriptor has DataQueryStatus marked
+            // (if not done by data query method)
+            //     desc.DataQueryStatus = DbQueryStatus.Success;
+
+            // and show label values
+            //    ShowLabelValues(desc);
+
+            OnAppMessage(this, new MessageEventArgs { Message = "No data found." });
+        }
+        */
+
+
+        /// <summary>
+        /// Check whether to perform wildcard search.
+        /// </summary>
+        private bool IsWildCardSearch(String varName, String value)
+        {
+            if (mApp.BarcodeLabelProcessor == null)
+                return false;
+            var desc = mApp.BarcodeLabelProcessor.LabelDescriptor;
+            String lastSearchField = desc.LastSearchField;
+            return (varName == lastSearchField && (value.Contains('%') || QueryFieldsContainWildcard(desc)));
+        }
+
+        private bool QueryFieldsContainWildcard(LabelDescriptor desc)
+        {
+            return desc.DbQueryFields.Values.Any(v => v.Contains('%'));
+        }
+
+
+        /// <summary>
+        /// Perform wildcard search - present user with list of options.
+        /// </summary>
+        private void DoWildCardSearch(String varName, String value)
+        {
+            if (mApp.BarcodeLabelProcessor == null)
+                return;
+
+            // Wildcard Search Query
+            Logger.Write(Level.Debug, "** CellEdit: Wildcard search");
+
+            var desc = mApp.BarcodeLabelProcessor.LabelDescriptor;
+            if (desc.DbQueryFields.ContainsKey(varName))
+                desc.DbQueryFields[varName] = value;
+
+            var queryParams = new Dictionary<String, String>(desc.DbQueryFields);
+            var valueList = mApp.BarcodeLabelProcessor.DbWildcardQueryDesktop(queryParams);
+            if (valueList.Count == 0)
+                OnAppMessage(this, new MessageEventArgs { Message = "No data found." });
+            else
+            {
+                var searchDialog = new SearchDialog(valueList);
+                DialogResult result = searchDialog.ShowDialog();
+                if (result == DialogResult.OK)
+                {
+                    var selectedValue = searchDialog.ResultData;
+                    desc.UpdateDescriptorDbResult(DbQueryStatus.Success, selectedValue);
+                    mApp.UpdateFieldTable(selectedValue);
+                    dataGridPrint.Refresh();
+                    ShowLabelValues(desc);
+                }
             }
         }
+
+        /// <summary>
+        /// Displays current values on the form, representing content of LabelDescriptor
+        /// property of the current LabelProcessor instance.
+        /// </summary>
+        /// <param name="desc"></param>
+        private void ShowLabelValues(LabelDescriptor desc)
+        {
+            String str = "";
+            foreach (var entry in desc.DbResultFields)
+            {
+                // Only add a line if not also contained in Editable fields:
+                if (!desc.EditableFields.ContainsKey(entry.Key))
+                {
+                    str += entry.Key.PadRight(25) + entry.Value + "\r\n";
+                }
+            }
+            foreach (var entry in desc.EditableFields)
+            {
+                str += entry.Key.PadRight(25) + entry.Value + "\r\n";
+            }
+            txtLabelValues.Text = str;
+        }
+
 
         #endregion
 
@@ -597,14 +791,17 @@ namespace LabelCastDesktop
         /// </summary>
         private void ClearInputValues()
         {
-            Thread.Sleep(1000);
-
             Logger.Write(Level.Debug, "Clearing input values for next label");
 
             for (int i = 0; i < mApp.FieldTable.Rows.Count; i++)
             {
                 mApp.FieldTable.Rows[i][1] = "";
+                if (mApp.FieldTable.Rows[i][0].ToString() == "Number of Labels")
+                    mApp.FieldTable.Rows[i][1] = "1";
             }
+
+            var proc = mApp.BarcodeLabelProcessor;
+            proc?.ClearLabelDescriptor();
 
             if (dataGridPrint.InvokeRequired)
             {
@@ -699,6 +896,31 @@ namespace LabelCastDesktop
         {
             CheckConfigurationLock();
             tabControl1.SelectedTab = tabPrinters;
+        }
+
+        #endregion
+
+        #region Internal Methods
+
+        /// <summary>
+        /// Checks whether a Numeric-Search-SQL-query exists.
+        /// This indicates that the alternate numeric search (searching by barcode or other
+        /// numeric ID) is enabled.
+        /// </summary>
+        private Boolean NumericQueryExists()
+        {
+            String numSearchSQL = mApp.GetActiveProfile()?.SqlQueryNumeric ?? "";
+            return (!String.IsNullOrWhiteSpace(numSearchSQL));
+        }
+
+        private void DebugPrintFieldTable()
+        {
+            String s = "Debug Print of FieldTable:\r\n";
+            for (int i = 0; i < mApp.FieldTable.Rows.Count; i++)
+            {
+                s += mApp.FieldTable.Rows[i]["Variable"].ToString() + " = " + mApp.FieldTable.Rows[i]["Value"].ToString() + "\r\n";
+            }
+            Logger.Write(Level.Debug, s);
         }
 
         #endregion

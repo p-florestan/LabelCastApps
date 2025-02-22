@@ -8,10 +8,56 @@ namespace LabelCastDesktop
 
     public class DictionaryEditorForm : Form
     {
+        #region Fields 
+
         private Button okButton = new Button();
         private Button cancelButton = new Button();
         private DataGridView dataGrid1 = new DataGridView();
         private BindingSource mBindingSource;
+
+        #endregion
+
+        #region Constructor
+
+        public DictionaryEditorForm(Dictionary<string, string> dictionary)
+        {
+            InitializeComponent();
+
+            EditedDictionary = new Dictionary<string, string>(dictionary);
+
+            okButton.DialogResult = DialogResult.OK;
+            cancelButton.DialogResult = DialogResult.Cancel;
+
+            // Convert the dictionary to a list of KeyValueItems
+            var list = dictionary.Select(kvp => new KeyValueItem
+            {
+                Key = kvp.Key,
+                Value = kvp.Value
+            }).ToList();
+
+            // Initialize the BindingSource and bind the list to it
+            mBindingSource = new BindingSource();
+            mBindingSource.DataSource = list;
+
+            // Bind the DataGridView to the BindingSource
+            dataGrid1.DataSource = mBindingSource;
+
+            // Make sure both Key and Value columns are editable
+            dataGrid1.Columns[0].ReadOnly = false; // Column 0 (Key) editable
+            dataGrid1.Columns[0].MinimumWidth = 210;
+            dataGrid1.Columns[1].ReadOnly = false; // Column 1 (Value) editable
+            dataGrid1.Columns[1].MinimumWidth = 210;
+        }
+
+        #endregion
+
+        #region Public Properties
+
+        public Dictionary<string, string> EditedDictionary { get; private set; }
+
+        #endregion
+
+        #region Internal Methods
 
         private void InitializeComponent()
         {
@@ -66,39 +112,6 @@ namespace LabelCastDesktop
             ResumeLayout(false);
         }
 
-        public Dictionary<string, string> EditedDictionary { get; private set; }
-
-
-        public DictionaryEditorForm(Dictionary<string, string> dictionary)
-        {
-            InitializeComponent();
-
-            EditedDictionary = new Dictionary<string, string>(dictionary);
-
-            okButton.DialogResult = DialogResult.OK;
-            cancelButton.DialogResult = DialogResult.Cancel;
-
-            // Convert the dictionary to a list of KeyValueItems
-            var list = dictionary.Select(kvp => new KeyValueItem
-            {
-                Key = kvp.Key,
-                Value = kvp.Value
-            }).ToList();
-
-            // Initialize the BindingSource and bind the list to it
-            mBindingSource = new BindingSource();
-            mBindingSource.DataSource = list;
-
-            // Bind the DataGridView to the BindingSource
-            dataGrid1.DataSource = mBindingSource;
-
-            // Make sure both Key and Value columns are editable
-            dataGrid1.Columns[0].ReadOnly = false; // Column 0 (Key) editable
-            dataGrid1.Columns[0].MinimumWidth = 210;
-            dataGrid1.Columns[1].ReadOnly = false; // Column 1 (Value) editable
-            dataGrid1.Columns[1].MinimumWidth = 210;
-        }
-
         // When the form is closed or when you need to save the changes
         private void SaveChanges()
         {
@@ -107,12 +120,18 @@ namespace LabelCastDesktop
             EditedDictionary = updatedList.ToDictionary(item => item.Key, item => item.Value);
         }
 
+        #endregion
+
+        #region Form Control Event Handlers
+
         // Button click event to save changes
         private void okButton_Click(object? sender, EventArgs e)
         {
             SaveChanges();
             MessageBox.Show("Changes saved.");
         }
+
+        #endregion
     }
 
 

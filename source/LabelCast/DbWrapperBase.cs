@@ -140,6 +140,7 @@ namespace LabelCast
         internal void ValidateSqlSelect(String sqlQuery, Dictionary<String, String> dataVars)
         {
             // We only do a weak test - does the name of the variable appear at all in the SQL?
+            // This is due to potential complexities with subqueries, sub-selects etc.
 
             String sql = sqlQuery.ToUpper();
             Logger.Write(Level.Debug, "Validating SQL query against DataFields (result fields) list. SQL Query:" + sql);
@@ -181,7 +182,9 @@ namespace LabelCast
 
         /// <summary>
         /// Update the DbResultFields dictionary from the database result set.<br/>
-        /// If no data was returned, throw an exception.
+        /// If no data was returned, throw an exception.<br/>
+        /// Verifies at the same time that each variable from dataVars (= dbResultFields) actually
+        /// appears in the SQL result set.
         /// </summary>
         internal List<Dictionary<String, String>> FillOptionListValues(Dictionary<String, String> dataVars, DataTable table)
         {
@@ -197,7 +200,7 @@ namespace LabelCast
                     if (table.Columns.Contains(key))
                         option[key] = table.Rows[idx][key].ToString() ?? "";
                     else
-                        throw new ApplicationException("Error: Column '" + key + "' mismatch between SQL and DataFields in profile");
+                        throw new ApplicationException("Error: Data-field '" + key + "' not part of SQL result (SQL query incorrect)");
                 }
                 optionList.Add(option);
             }

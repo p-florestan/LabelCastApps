@@ -93,6 +93,14 @@ namespace LabelCast
             return s.Length < n ? s : s.Substring(s.Length - n);
         }
 
+        /// <summary>
+        /// Verifies if the string is numeric integer, i.e. can be converted to an Int64.
+        /// </summary>
+        public static Boolean IsInteger(this String? s)
+        {
+            return Int64.TryParse(s, out long number);
+        }
+
         #endregion
 
         #region DateTime Utilities
