@@ -356,7 +356,7 @@
             // 
             panelLabel.BackColor = Color.FromArgb(25, 25, 25);
             panelLabel.Controls.Add(pictLabel);
-            panelLabel.Location = new Point(340, 630);
+            panelLabel.Location = new Point(340, 655);
             panelLabel.Name = "panelLabel";
             panelLabel.Size = new Size(171, 52);
             panelLabel.TabIndex = 3;
@@ -380,7 +380,7 @@
             // 
             panelProfile.BackColor = Color.FromArgb(25, 25, 25);
             panelProfile.Controls.Add(pictProfile);
-            panelProfile.Location = new Point(170, 630);
+            panelProfile.Location = new Point(170, 655);
             panelProfile.Name = "panelProfile";
             panelProfile.Size = new Size(170, 52);
             panelProfile.TabIndex = 4;
@@ -403,7 +403,7 @@
             // 
             panelPrinter.BackColor = Color.FromArgb(25, 25, 25);
             panelPrinter.Controls.Add(pictPrinter);
-            panelPrinter.Location = new Point(0, 630);
+            panelPrinter.Location = new Point(0, 655);
             panelPrinter.Name = "panelPrinter";
             panelPrinter.Size = new Size(170, 52);
             panelPrinter.TabIndex = 5;
@@ -434,7 +434,7 @@
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = Color.White;
-            ClientSize = new Size(511, 682);
+            ClientSize = new Size(511, 707);
             Controls.Add(panelBtm);
             Controls.Add(panelProfile);
             Controls.Add(panelPrinter);

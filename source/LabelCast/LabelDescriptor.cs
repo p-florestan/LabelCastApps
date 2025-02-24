@@ -115,6 +115,15 @@ namespace LabelCast
         public String LastSearchField { get; set; } = "";
 
         /// <summary>
+        /// Name of database result column to use when displaying options for user wildcard
+        /// entry option selection.
+        /// </summary>
+        public String DisplayField { get; set; } = "";
+
+
+
+
+        /// <summary>
         /// Status and progress of database queries
         /// </summary>
         public DbQueryStatus DataQueryStatus { get; set; } = DbQueryStatus.NoQuery;
@@ -125,10 +134,10 @@ namespace LabelCast
         public String DataQueryStatusText { get; set; } = "";
 
         /// <summary>
-        /// Name of database result column to use when displaying options for user wildcard
-        /// entry option selection.
+        /// Whether thw current database query is an numeric code query
         /// </summary>
-        public String DisplayField { get; set; } = "";
+        public bool IsNumericCodeQuery { get; set; } = false;
+
 
 
         /// <summary>
@@ -143,7 +152,8 @@ namespace LabelCast
         public Boolean ReadyToPrint { get; set; } = false;
 
         /// <summary>
-        /// Error Message. This may relate to any type of editing of the descriptor.
+        /// Error Message. This may relate to any type of editing of the descriptor
+        /// (unlike DataQueryStatusText which only relates to database queries).
         /// </summary>
         public String ErrorMessage { get; set; } = "";
 
@@ -270,6 +280,10 @@ namespace LabelCast
 
             // Note that the variable replacement will fail if capitalization
             // of variable in the profile configuration is different from the ZPL template!
+            //
+            // Replacement works on best-effort basis - field may or may not be present in template,
+            // but if not found, it logs a Notice.
+            //
 
             String zpl = zplTemplate;
             Logger.Write(Level.Debug, "Label template before value replacement:\r\n--------------------------------\r\n" + zpl + "\r\n--------------------------------\r\n");
@@ -278,7 +292,7 @@ namespace LabelCast
             foreach (String varName in DbResultFields.Keys)
             {
                 if (zpl.IndexOf("^FD" + varName + "^") < 0)
-                    errorMsg += "Data Field '" + varName + "' from profile not found in label template\r\n";
+                    Logger.Write(Level.Notice, "Data Field '" + varName + "' from profile not found in label template\r\n");
                 else
                     zpl = zpl.Replace("^FD" + varName + "^", "^FD" + DbResultFields[varName] + "^");
             }
@@ -288,7 +302,7 @@ namespace LabelCast
             foreach (String varName in EditableFields.Keys.Where(key => !DbResultFields.ContainsKey(key)))
             {
                 if (zpl.IndexOf("^FD" + varName + "^") < 0)
-                    errorMsg += "Editable Field '" + varName + "' from profile not found in label template\r\n";
+                    Logger.Write(Level.Notice, "Editable Field '" + varName + "' from profile not found in label template\r\n");
                 else
                     zpl = zpl.Replace("^FD" + varName + "^", "^FD" + EditableFields[varName] + "^");
             }

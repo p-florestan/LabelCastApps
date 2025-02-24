@@ -320,11 +320,21 @@ function removeClassTest() {
 
         var wildCardsPresent = false;
         mDescriptor.CurrentEditField = currentField;
+        var firstInputValue = mInputList[0].value;
 
-        // Determine if this is a database-query
-        if (currentField == mDescriptor.LastSearchField) {
-            debugPrint('Edit results in a database query');
+        if (currentField === mDescriptor.FirstSearchField && isNumber(firstInputValue)) {
+            // Is this going to be a numeric code query?
+            // The first input field is also "FirstSearchField" - if its value is numeric it's a num query.
+            debugPrint('Edit results in a numerice code db query');
             mDescriptor.DataQueryStatus = dbPENDING;
+            mDescriptor.IsNumericCodeQuery = true;
+        }
+
+        else if (currentField == mDescriptor.LastSearchField) {
+            // Is this going to be a regular item database-query?
+            debugPrint('Edit results in a regular database query');
+            mDescriptor.DataQueryStatus = dbPENDING;
+            mDescriptor.IsNumericCodeQuery = false;
         }
 
         for (var n = 0; n < mInputList.length; n++) {
@@ -354,15 +364,41 @@ function removeClassTest() {
         return (wildCardsPresent && mDescriptor.DataQueryStatus == dbPENDING);
     }
 
+
+
     // Update the values in mDescrptor from server response data.
     // This only updates database query results and ReadyToPrint prop - we cannot just replace
     // mDescriptor with the response because server responses may return out of order
     function updateResultFields(responseText, currentField) {
         var respData = JSON.parse(responseText);
 
-        // Determine if this is a database-query
-        // Only if so, we update db query status and result fields
-        if (currentField == respData.LastSearchField) {
+        mDescriptor.CurrentEditField = respData.CurrentEditField;
+
+        if (mDescriptor.CurrentEditField === respData.FirstSearchField && respData.IsNumericCodeQuery) {
+            // Was this a numeric code query?
+
+            mDescriptor.DataQueryStatus = respData.DataQueryStatus;
+            mDescriptor.DataQueryStatusText = respData.DataQueryStatusText;
+
+            if (mDescriptor.DataQueryStatus === dbSUCCESS) {
+                var keys = getKeys(mDescriptor.DbResultFields);
+                for (var n = 0; n < keys.length; n++) {
+                    mDescriptor.DbResultFields[keys[n]] = respData.DbResultFields[keys[n]];
+                }
+                // update what is shown in UI
+                updateInputsFromDbResult();
+            }
+            else if (mDescriptor.DataQueryStatus === dbFAILED) {
+                debugPrint('DbQuery failure. Clear dbTimer');
+                dbTimerIdx = 0;
+            }
+
+            // reset NumericCodeQuery flag
+            mDescriptor.IsNumericCodeQuery = false;
+        }
+        else if (currentField == respData.LastSearchField) {
+            // Was this a regular item database-query?
+            // Only if so, we update db query status and result fields
 
             mDescriptor.DataQueryStatus = respData.DataQueryStatus;
             mDescriptor.DataQueryStatusText = respData.DataQueryStatusText;
@@ -377,11 +413,14 @@ function removeClassTest() {
                 debugPrint('DbQuery failure. Clear dbTimer');
                 dbTimerIdx = 0;
             }
+
+            // update what is shown in UI
+            updateInputsFromDbResult();
         }
 
-        // update currently edited field
-        if (mDescriptor.EditableFields.hasOwnProperty(currentField)) {
-            mDescriptor.EditableFields[currentField] = respData.EditableFields[currentField];
+        // update the field which this response concerns:
+        if (mDescriptor.EditableFields.hasOwnProperty(mDescriptor.CurrentEditField)) {
+            mDescriptor.EditableFields[mDescriptor.CurrentEditField] = respData.EditableFields[mDescriptor.CurrentEditField];
         }
 
         mDescriptor.ErrorMessage = respData.ErrorMessage;
@@ -398,6 +437,22 @@ function removeClassTest() {
         }
 
         debugStatusShow();
+    }
+
+
+    // Update input elements in HTML from data returned in DbResultFields.
+    // This always updates DbQueryFields, and also any EditFields (if they are both
+    // Edit + DbResult fields)
+    function updateInputsFromDbResult() {
+
+        for (let n = 0; n < mInputList.length; n++) {
+
+            var fieldName = mInputList[n].getAttribute('name');
+
+            if (mDescriptor.DbResultFields.hasOwnProperty(fieldName)) {
+                mInputList[n].value = mDescriptor.DbResultFields[fieldName];
+            }
+        }
     }
 
 

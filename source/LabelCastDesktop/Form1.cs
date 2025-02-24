@@ -78,9 +78,10 @@ namespace LabelCastDesktop
         private void OnAppMessage(object sender, MessageEventArgs e)
         {
             Logger.Write(Level.Debug, "Message: " + e.Message);
-
+            
+            Thread.Sleep(100);
             if (MsgLabel.InvokeRequired)
-                MsgLabel.Invoke(new Action(() => MsgLabel.Text = e.Message));
+                MsgLabel.BeginInvoke(new Action(() => MsgLabel.Text = e.Message));
             else
                 MsgLabel.Text = e.Message;
         }
@@ -567,6 +568,7 @@ namespace LabelCastDesktop
                 // Ensure EndEdit is not called due to leaving "tabLabel" tab
                 if (tabControl1.SelectedTab?.Name == "tabLabel")
                 {
+                    Logger.Write(Level.Debug, "Clear message in HandleCellEndEditAsync");
                     MsgLabel.Text = "";
                     String varName = dataGridPrint.Rows[mCurrentRow].Cells[0].Value?.ToString() ?? "";
                     String value = dataGridPrint.Rows[mCurrentRow].Cells[1].Value?.ToString() ?? "";
@@ -719,7 +721,12 @@ namespace LabelCastDesktop
             {
                 str += entry.Key.PadRight(25) + entry.Value + "\r\n";
             }
-            txtLabelValues.Text = str;
+
+            // Show values
+            if (txtLabelValues.InvokeRequired)
+                txtLabelValues.BeginInvoke(new Action(() => { txtLabelValues.Text = str; }));
+            else
+                txtLabelValues.Text = str;
         }
 
 

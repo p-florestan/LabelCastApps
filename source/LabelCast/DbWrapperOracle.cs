@@ -62,7 +62,7 @@ namespace LabelCast
             else
             {
                 Logger.Write(Level.Debug, " - Oracle.QueryData failed: " + oInfo.errorText);
-                throw new DataException(oInfo.errorText);
+                throw new DataException("Database query failed: " + oInfo.errorText);
             }
         }
 
@@ -89,7 +89,7 @@ namespace LabelCast
             else
             {
                 Logger.Write(Level.Debug, " - Oracle.QueryListData failed: " + oInfo.errorText);
-                throw new DataException(oInfo.errorText);
+                throw new DataException("Database query failed: " + oInfo.errorText);
             }
         }
 

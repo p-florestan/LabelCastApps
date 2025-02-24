@@ -143,7 +143,7 @@ namespace LabelCast
             // This is due to potential complexities with subqueries, sub-selects etc.
 
             String sql = sqlQuery.ToUpper();
-            Logger.Write(Level.Debug, "Validating SQL query against DataFields (result fields) list. SQL Query:" + sql);
+            Logger.Write(Level.Debug, "Validating SQL query against DataFields (result fields) list. SQL Query:\r\n" + sql);
 
             foreach (var key in dataVars.Keys)
             {

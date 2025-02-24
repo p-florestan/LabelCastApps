@@ -1,4 +1,5 @@
 {
   "ActiveProfile": "DEMO",
-  "ActivePrinter": "Demo Printer"
+  "ActivePrinter": "Demo Printer",
+  "LogLevel": "Debug"
 }

@@ -5,16 +5,20 @@
   "DatabaseType": "SQLite",
   "DbConnectionString": "Data Source=c:\\Program Info\\LabelCast\\demo-sqlite.db;Version=3;",
   "DbTimeZone": "UTC",
-  "SqlQuery": "SELECT description, code, price FROM Flowers WHERE name = '{name}' LIMIT 1",
-  "SearchSqlQuery": "SELECT description, code, price FROM Flowers WHERE code LIKE '{name}'",
+  "SqlQuery": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE name = '{name}' \r\nAND color = '{color}' \r\nLIMIT 1",
+  "SearchSqlQuery": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE name LIKE '{name}'\r\n    AND color LIKE '{color}'",
+  "SqlQueryNumeric": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE code = '{name}' \r\nLIMIT 1\r\n",
   "DisplayField": "",
   "SearchFields": [
-    "Name"
+    "Name",
+    "Color"
   ],
   "DataFields": [
     "Description",
     "Code",
-    "Price"
+    "Price",
+    "Name",
+    "Color"
   ],
   "EditableFields": [
     "Price"
@@ -25,12 +29,15 @@
   "JSONSchemaOption": "UseProfileSchema",
   "JSONProfileMap": {},
   "JSONSearchFieldMap": {
-    "Name": ""
+    "Name": "",
+    "Color": ""
   },
   "JSONDataFieldMap": {
     "Description": "",
     "Code": "",
-    "Price": ""
+    "Price": "",
+    "Name": "",
+    "Color": ""
   },
   "JSONEditFieldMap": {
     "Price": ""
@@ -41,12 +48,15 @@
   "XMLSchemaOption": "UseProfileSchema",
   "XMLProfileMap": {},
   "XMLSearchFieldMap": {
-    "Name": ""
+    "Name": "",
+    "Color": ""
   },
   "XMLDataFieldMap": {
     "Description": "",
     "Code": "",
-    "Price": ""
+    "Price": "",
+    "Name": "",
+    "Color": ""
   },
   "XMLEditFieldMap": {
     "Price": ""

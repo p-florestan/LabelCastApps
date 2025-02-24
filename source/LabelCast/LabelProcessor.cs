@@ -177,19 +177,16 @@ namespace LabelCast
             if (mDescriptor.DbQueryFields.ContainsKey(varName))
             {
                 mDescriptor.DbQueryFields[varName] = value;
-                if (varName == mDescriptor.FirstSearchField && !String.IsNullOrWhiteSpace(mProfile.SqlQueryNumeric))
+                if (varName == mDescriptor.FirstSearchField && NumericQueryExists() && value.IsInteger())
                 {
-                    // If value is numeric, do alternate numeric query
-                    if (value.IsInteger())
-                    {
-                        Logger.Write(Level.Debug, " -- alternate numeric code query (on first search variable)");
-                        QueryDatabaseAsync(mProfile.SqlQueryNumeric, UseOnlyFirstQueryField:true);
-                    }
+                    // Alternate numeric code query
+                    Logger.Write(Level.Debug, "Alternate numeric code query (on first search variable)");
+                    QueryDatabaseAsync(mProfile.SqlQueryNumeric, UseOnlyFirstQueryField: true);
                 }
                 else if (varName == mDescriptor.LastSearchField)
                 {
-                    // regular database query
-                    Logger.Write(Level.Debug, " -- reqular database query (on last search variable)");
+                    // Regular database query by item
+                    Logger.Write(Level.Debug, "Reqular database query (on last search variable)");
                     QueryDatabaseAsync(mProfile.SqlQuery);
                 }
             }
@@ -279,20 +276,30 @@ namespace LabelCast
                 String editValue = mDescriptor.DbQueryFields[editVar];
                 if (editVar == mDescriptor.FirstSearchField && NumericQueryExists() && editValue.IsInteger())
                 {
-                    // Numeric code search
-                    // 
-                    // Note - this is another flow (a search flow) - so this check might not even belong here
-                    // To be finalized
-                    //
+                    // Alternate numeric code query
+                    mDescriptor.IsNumericCodeQuery = true;
+                    Logger.Write(Level.Debug, "Alternate numeric code query (on first search variable)");
+                    try
+                    {
+                        // must use only first query criteria field!
+                        msgResult = QueryDatabaseWeb(mProfile.SqlQueryNumeric, UseOnlyFirstQueryField:true);
+                    }
+                    catch (Exception ex)
+                    {
+                        mDescriptor.DataQueryStatus = DbQueryStatus.Failed;
+                        mDescriptor.DataQueryStatusText = ex.Message;
+                        Logger.Write(Level.Notice, " - Alternate Numeric Code Query Error: " + ex.Message + "\r\n" + ex.StackTrace);
+                        throw new DataException(ex.Message);
+                    }
                 }
                 else if (editVar == mDescriptor.LastSearchField)
                 {
-                    Logger.Write(Level.Debug, " - detected last search variable. Now quering database.");
-
-                    // Any database related error will throw "DataException"
+                    // Regular database query by item
+                    mDescriptor.IsNumericCodeQuery = false;
+                    Logger.Write(Level.Debug, "Reqular database query (on last search variable)");
                     try
                     {
-                        msgResult = QueryDatabaseWeb();
+                        msgResult = QueryDatabaseWeb(mProfile.SqlQuery);
                     }
                     catch (Exception ex)
                     {
@@ -423,7 +430,14 @@ namespace LabelCast
         protected virtual void TriggerLabelMessageEvent(String message)
         {
             Logger.Write(Level.Debug, "LabelProcessor: TriggerLabelMessage: " + message);
-            MessageEvent?.Invoke(this, new MessageEventArgs(message));
+            // Invoke events asynchronously to ensure propagation:
+            if (MessageEvent != null)
+            {
+                foreach (MessageEventHandler handler in MessageEvent.GetInvocationList())
+                {
+                    Task.Run(() => handler.Invoke(this, new MessageEventArgs {  Message = message }));
+                }
+            }
         }
 
 
@@ -433,7 +447,14 @@ namespace LabelCast
         protected virtual void TriggerPrintCompleteEvent()
         {
             Logger.Write(Level.Debug, "LabelProcessor: TriggerPrintCompleteEvent");
-            PrintCompleteEvent?.Invoke(this, EventArgs.Empty);
+            // Invoke events asynchronously to ensure propagation:
+            if (PrintCompleteEvent != null)
+            {
+                foreach (PrintCompleteEventHandler handler in PrintCompleteEvent.GetInvocationList())
+                {
+                    Task.Run(() => handler.Invoke(this, EventArgs.Empty));
+                }
+            }
         }
 
 
@@ -443,7 +464,14 @@ namespace LabelCast
         protected virtual void TriggerQueryCompleteEvent(Dictionary<String, String> dbResult)
         {
             Logger.Write(Level.Debug, "LabelProcessor: TriggerQueryCompleteEvent");
-            DbQueryCompleteEvent?.Invoke(this, new DbQueryEventArgs(dbResult));
+            // Invoke events asynchronously to ensure propagation:
+            if (DbQueryCompleteEvent != null)
+            {
+                foreach (QueryCompleteEventHandler handler in DbQueryCompleteEvent.GetInvocationList())
+                {
+                    Task.Run(() => handler.Invoke(this, new DbQueryEventArgs(dbResult)));
+                }
+            }
         }
 
         #endregion
@@ -494,23 +522,6 @@ namespace LabelCast
             }
         }
 
-        private Dictionary<string, string> GetQueryCriteria(bool useOnlyFirstQueryField)
-        {
-            Dictionary<String, String> queryCriteria = new Dictionary<String, String>();
-            
-            int idx = 1;
-            foreach(var entry in mDescriptor.DbQueryFields)
-            {
-                if (useOnlyFirstQueryField == false || idx == 1)
-                {
-                    queryCriteria.Add(entry.Key, entry.Value);
-                    idx++;
-                }
-            }
-
-            Logger.Write(Level.Debug, "DbTask: Query criteria = " + JsonConvert.SerializeObject(mDescriptor.DbQueryFields, Formatting.Indented));
-            return queryCriteria;
-        }
 
 
         /// <summary>
@@ -520,7 +531,7 @@ namespace LabelCast
         /// It should be called when the variables required to filter the query
         /// from the database has been filled out. 
         /// </summary>
-        private String QueryDatabaseWeb()
+        private String QueryDatabaseWeb(String sqlQuery, bool UseOnlyFirstQueryField = false)
         {
             Logger.Write(Level.Notice, "Database Query start.");
             mDescriptor.DataQueryStatus = DbQueryStatus.Pending;
@@ -528,12 +539,11 @@ namespace LabelCast
             String message = "";
             try
             {
-                Logger.Write(Level.Debug, "DbTask: Query criteria = " + JsonConvert.SerializeObject(mDescriptor.DbQueryFields, Formatting.Indented));
-
+                Dictionary<String, String> queryCriteria = GetQueryCriteria(UseOnlyFirstQueryField);
                 Dictionary<String, String> dbResult = new Dictionary<string, string>();
 
                 var db = CreateDb(mProfile.DatabaseType);
-                dbResult = db.QueryData(mProfile.SqlQuery, mDescriptor.DbQueryFields, mDescriptor.DbResultFields);
+                dbResult = db.QueryData(sqlQuery, queryCriteria, mDescriptor.DbResultFields);
 
                 mDescriptor.UpdateDescriptorDbResult(DbQueryStatus.Success, dbResult);
                 Logger.Write(Level.Notice, "Database Query Success.");
@@ -558,6 +568,31 @@ namespace LabelCast
 
 
 
+        /// <summary>
+        /// Obtains query criteria fields, depending whether we should use only the first
+        /// query field (in the case of a numeric alternate query), or all fields.
+        /// </summary>
+        private Dictionary<string, string> GetQueryCriteria(bool useOnlyFirstQueryField)
+        {
+            Dictionary<String, String> queryCriteria = new Dictionary<String, String>();
+
+            int idx = 1;
+            foreach (var entry in mDescriptor.DbQueryFields)
+            {
+                if (useOnlyFirstQueryField == false || idx == 1)
+                {
+                    queryCriteria.Add(entry.Key, entry.Value);
+                    idx++;
+                }
+            }
+
+            Logger.Write(Level.Debug, "DbTask: Query criteria = " + JsonConvert.SerializeObject(mDescriptor.DbQueryFields, Formatting.Indented));
+            return queryCriteria;
+        }
+
+
+
+
         private void WaitForDataEntryComplete()
         {
             String msgResult = "";
@@ -570,15 +605,13 @@ namespace LabelCast
             else if (mDescriptor.DataQueryStatus == DbQueryStatus.Success)
             {
                 Logger.Write(Level.Debug, " -- database query complete, sending label to printing.");
+                
                 msgResult = SendLabelToPrinter(mDescriptor);
+                
                 if (String.IsNullOrWhiteSpace(msgResult))
-                {
                     TriggerPrintCompleteEvent();
-                }
                 else
-                {
                     TriggerLabelMessageEvent(msgResult);
-                }
             }
             else
             {

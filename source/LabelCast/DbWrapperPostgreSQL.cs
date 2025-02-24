@@ -60,7 +60,7 @@ namespace LabelCast
             else
             {
                 Logger.Write(Level.Debug, " - SQLite.QueryData failed: " + info.errorText);
-                throw new DataException(info.errorText);
+                throw new DataException("Database query failed: " + info.errorText);
             }
         }
 
@@ -87,7 +87,7 @@ namespace LabelCast
             else
             {
                 Logger.Write(Level.Debug, " - SQLite.QueryListData failed: " + info.errorText);
-                throw new DataException(info.errorText);
+                throw new DataException("Database query failed: " + info.errorText);
             }
         }
 

@@ -135,7 +135,7 @@ namespace LabelCastDesktop
 
         [Category("Database"),
             Description("SQL query string to find items with alternate numeric key (barcode etc)"),
-            DisplayName("SQL Query - Optional Numeric Code Query")]
+            DisplayName("SQL Query - Numeric Code Query")]
         [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public String SqlQueryNumeric { get; set; } = "";
 

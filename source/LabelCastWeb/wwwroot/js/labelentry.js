@@ -1,6 +1,6 @@
 ﻿
 // This JS code is deliberately written in a way to support older browsers.
-// Works in Firefox 52, but IE6-8 still not supported.
+// Works in Firefox 52+, but IE6-8 still not supported.
 
 var dbNOQUERY = 0;
 var dbPENDING = 1;
@@ -8,7 +8,7 @@ var dbSUCCESS = 2;
 var dbFAILED = 3;
 var dbStatus = ['NoQuery', 'Pending', 'Success', 'Failed'];
 
-var NoDebug = true;
+var NoDebug = false;
 
 
 document.addEventListener("DOMContentLoaded", (event) => {
@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
     // See C# LabelDescriptor server class for exact definition.
     // This holds all state for the label entry processing. Like any usual web application,
     // all state has to be kept on the client, and server is stateless.
-    // (Defined in earlier script in LabelEntry.cshtml view)
+    // (Dynamically defined in earlier script in LabelEntry.cshtml view, by serializing the C# class)
     //
     // var mDescriptor = {}
     //
@@ -83,6 +83,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
     printerSelect.addEventListener('change', activePrinterChange);
 
 
+    // This advances the focus to the next inputbox below upon pressing ENTER key
     function inputKeyDown(event) {
         if (event.key === 'Enter') {
             var idx = Number(event.target.id.substring(3));
@@ -172,11 +173,21 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
         var wildCardsPresent = false;
         mDescriptor.CurrentEditField = currentField;
-
-        // Determine if this is a database-query
-        if (currentField === mDescriptor.LastSearchField) {
-            debugPrint('Edit results in a database query');
+        var firstInputValue = mInputList[0].value;
+                
+        if (currentField === mDescriptor.FirstSearchField && isNumber(firstInputValue)) {
+            // Is this going to be a numeric code query?
+            // The first input field is also "FirstSearchField" - if its value is numeric it's a num query.
+            debugPrint('Edit results in a numerice code db query');
             mDescriptor.DataQueryStatus = dbPENDING;
+            mDescriptor.IsNumericCodeQuery = true;
+        }
+
+        else if (currentField === mDescriptor.LastSearchField) {
+            // Is this going to be a regular item database-query?
+            debugPrint('Edit results in a regular database query');
+            mDescriptor.DataQueryStatus = dbPENDING;
+            mDescriptor.IsNumericCodeQuery = false;
         }
 
         for (let n = 0; n < mInputList.length; n++) {
@@ -185,6 +196,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
             if (mDescriptor.DbQueryFields.hasOwnProperty(fieldName)) {
                 mDescriptor.DbQueryFields[fieldName] = mInputList[n].value;
+
                 if (mInputList[n].value.indexOf('%') >= 0)
                     wildCardsPresent = true;
             }
@@ -206,15 +218,20 @@ document.addEventListener("DOMContentLoaded", (event) => {
         return (wildCardsPresent && currentField === mDescriptor.LastSearchField);
     }
 
+
+
     // Update the values in mDescrptor from server response data.
     // This only updates database query results and ReadyToPrint prop - we cannot just replace
     // mDescriptor with the response because server responses may return out of order
     function updateResultFields(responseText, currentField) {
         var respData = JSON.parse(responseText);
 
-        // Determine if this is a database-query
-        // Only if so, we update db query status and result fields
-        if (currentField === respData.LastSearchField) {
+        mDescriptor.CurrentEditField = respData.CurrentEditField;
+
+        // Check current edit field in response
+
+        if (mDescriptor.CurrentEditField === respData.FirstSearchField && respData.IsNumericCodeQuery) {
+            // Was this a numeric code query?
 
             mDescriptor.DataQueryStatus = respData.DataQueryStatus;
             mDescriptor.DataQueryStatusText = respData.DataQueryStatusText;
@@ -224,6 +241,32 @@ document.addEventListener("DOMContentLoaded", (event) => {
                 for (var n = 0; n < keys.length; n++) {
                     mDescriptor.DbResultFields[keys[n]] = respData.DbResultFields[keys[n]];
                 }
+                // update what is shown in UI
+                updateInputsFromDbResult();
+            }
+            else if (mDescriptor.DataQueryStatus === dbFAILED) {
+                debugPrint('DbQuery failure. Clear dbTimer');
+                dbTimerIdx = 0;
+            }
+
+            // reset NumericCodeQuery flag
+            mDescriptor.IsNumericCodeQuery = false;
+        }
+        // else if (currentField === respData.LastSearchField) {
+        else if (mDescriptor.CurrentEditField === respData.LastSearchField) {
+            // Was this a regular item database-query?
+            // Only if so, we update db query status and result fields
+
+            mDescriptor.DataQueryStatus = respData.DataQueryStatus;
+            mDescriptor.DataQueryStatusText = respData.DataQueryStatusText;
+
+            if (mDescriptor.DataQueryStatus === dbSUCCESS) {
+                var keys = getKeys(mDescriptor.DbResultFields);
+                for (var n = 0; n < keys.length; n++) {
+                    mDescriptor.DbResultFields[keys[n]] = respData.DbResultFields[keys[n]];
+                }
+                // update what is shown in UI
+                updateInputsFromDbResult();
             }
             else if (mDescriptor.DataQueryStatus === dbFAILED) {
                 debugPrint('DbQuery failure. Clear dbTimer');
@@ -231,9 +274,9 @@ document.addEventListener("DOMContentLoaded", (event) => {
             }
         }
 
-        // update currently edited field
-        if (mDescriptor.EditableFields.hasOwnProperty(currentField)) {
-            mDescriptor.EditableFields[currentField] = respData.EditableFields[currentField];
+        // update the field which this response concerns:
+        if (mDescriptor.EditableFields.hasOwnProperty(mDescriptor.CurrentEditField)) {
+            mDescriptor.EditableFields[mDescriptor.CurrentEditField] = respData.EditableFields[mDescriptor.CurrentEditField];
         }
 
         mDescriptor.ErrorMessage = respData.ErrorMessage;
@@ -250,6 +293,27 @@ document.addEventListener("DOMContentLoaded", (event) => {
         }
 
         debugStatusShow();
+    }
+
+
+    function isNumber(str) {
+        if (typeof str != "string") return false // we only process strings!
+        return !isNaN(str) && !isNaN(parseFloat(str))
+    }
+
+    // Update input elements in HTML from data returned in DbResultFields.
+    // This always updates DbQueryFields, and also any EditFields (if they are both
+    // Edit + DbResult fields)
+    function updateInputsFromDbResult() {
+
+        for (let n = 0; n < mInputList.length; n++) {
+
+            var fieldName = mInputList[n].getAttribute('name');
+
+            if (mDescriptor.DbResultFields.hasOwnProperty(fieldName)) {
+                mInputList[n].value = mDescriptor.DbResultFields[fieldName];
+            }
+        }
     }
 
 

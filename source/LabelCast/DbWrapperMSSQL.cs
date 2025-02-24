@@ -63,7 +63,7 @@ namespace LabelCast
             else
             {
                 Logger.Write(Level.Debug, " - MSSQL.QueryData failed: " + info.errorText);
-                throw new DataException(info.errorText);
+                throw new DataException("Database query failed: " + info.errorText);
             }
         }
 
@@ -90,7 +90,7 @@ namespace LabelCast
             else
             {
                 Logger.Write(Level.Debug, " - MSSQL.QueryListData failed: " + info.errorText);
-                throw new DataException(info.errorText);
+                throw new DataException("Database query failed: " + info.errorText);
             }
         }
 
