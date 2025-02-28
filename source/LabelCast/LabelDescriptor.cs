@@ -282,30 +282,34 @@ namespace LabelCast
             // of variable in the profile configuration is different from the ZPL template!
             //
             // Replacement works on best-effort basis - field may or may not be present in template,
-            // but if not found, it logs a Notice.
+            // but if not found, it logs it as debug message.
             //
 
             String zpl = zplTemplate;
             Logger.Write(Level.Debug, "Label template before value replacement:\r\n--------------------------------\r\n" + zpl + "\r\n--------------------------------\r\n");
 
             // Replace fields from DbResultFields
-            foreach (String varName in DbResultFields.Keys)
+            // Do not try to replace fields which also appear in Editable fields (user-edit is priority0
+
+            foreach (String varName in DbResultFields.Keys.Where(key => !EditableFields.ContainsKey(key)))
             {
                 if (zpl.IndexOf("^FD" + varName + "^") < 0)
-                    Logger.Write(Level.Notice, "Data Field '" + varName + "' from profile not found in label template\r\n");
+                    Logger.Write(Level.Debug, "Data Field '" + varName + "' from profile not found in label template\r\n");
                 else
                     zpl = zpl.Replace("^FD" + varName + "^", "^FD" + DbResultFields[varName] + "^");
             }
-            
+
             // EditableFields
-            // Do not try to replace fields which already appeared in DbResultFields
-            foreach (String varName in EditableFields.Keys.Where(key => !DbResultFields.ContainsKey(key)))
+
+            foreach (String varName in EditableFields.Keys)
             {
                 if (zpl.IndexOf("^FD" + varName + "^") < 0)
-                    Logger.Write(Level.Notice, "Editable Field '" + varName + "' from profile not found in label template\r\n");
+                    Logger.Write(Level.Debug, "Editable Field '" + varName + "' from profile not found in label template\r\n");
                 else
                     zpl = zpl.Replace("^FD" + varName + "^", "^FD" + EditableFields[varName] + "^");
             }
+
+            // Label Count 
 
             Logger.Write(Level.Debug, "Label count = " + this.LabelCount.ToString());
 

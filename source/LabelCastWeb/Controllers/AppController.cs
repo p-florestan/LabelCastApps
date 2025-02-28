@@ -2,10 +2,9 @@ using System;
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
-using LabelCastWeb;
 using LabelCastWeb.Models;
 using Newtonsoft.Json;
-using System.Net;
+using System.Web;
 using LabelCast;
 
 namespace LabelCastWeb.Controllers
@@ -111,15 +110,21 @@ namespace LabelCastWeb.Controllers
                 Profile activeProfile = GetActiveProfile(p);
                 Printer activePrinter = GetActivePrinter(n);
                 var labelProcessor = new LabelProcessor(activeProfile, activePrinter);
+                var desc = labelProcessor.LabelDescriptor;
 
                 var entryData = new LabelStructure
                 {
                     EntryTable = labelProcessor.GetFieldTable(),
-                    LabelDescriptor = labelProcessor.LabelDescriptor,
+                    LabelDescriptor = desc,
                     ProfileList = App.Config.ProfileList.Select(p => p.Abbreviation).ToList(),
                     ActiveProfile = activeProfile.Abbreviation,
                     PrinterList = PrinterStore.Printers.Select(p => p.Name).ToList(),
-                    ActivePrinter = activePrinter.Name
+                    ActivePrinter = activePrinter.Name,
+                    PageEditIndex = 0,
+                    PageResultFields = desc.DbResultFields.Except(desc.DbQueryFields)
+                                                          .Except(desc.EditableFields)
+                                                          .ToDictionary(),
+                    PageMessage = "",
                 };
 
                 return View(viewName, entryData);
@@ -253,7 +258,7 @@ namespace LabelCastWeb.Controllers
 
         #endregion
 
-        #region Public API - Label Requests
+        #region Public API - Label Requests API
 
         /// <summary>
         /// External API method - submit label data for printing (with all data fields 
@@ -347,15 +352,22 @@ namespace LabelCastWeb.Controllers
             }
         }
 
+        #endregion
+
+        #region Public API - Form Request Methods (IE6)
+
+        // These controller methods work like a classic ASP site without Ajax - every request
+        // results in a full page view.
 
         /// <summary>
-        /// External API method - submit label data from a simple HTML form, 
-        /// submitted in standard www-form-urlencoded format.<br/>
-        /// (This is primarily intended for supporting old IE6 browsers,
-        /// and therefore, upon success, it returns the view LabelEntryIE6.)
+        /// External API method - submit label data from a simple HTML form, submitted in standard 
+        /// www-form-urlencoded format, like classic ASP or PHP.<br/>
+        /// Data exchange between client and server occurs through form fields, not by asynchronously exchanging
+        /// JSON objects like the regular web client. This is primarily intended for supporting old IE6 browsers, 
+        /// and returns HTML (view LabelEntryIE6.cshtml).
         /// </summary>
         [HttpPost("formqueue")]
-        public async Task<IActionResult> SubmitLabelHtmlFormIE6()
+        public async Task<IActionResult> SubmitLabelHtmlFormClassic()
         {
             try
             {
@@ -367,10 +379,16 @@ namespace LabelCastWeb.Controllers
                     String formData = await reader.ReadToEndAsync();
                     fieldList = formData.Split('&')
                                         .Select(x => x.Split('='))
-                                        .ToDictionary(x => x[0], x => x[1]);
+                                        // replacing html-encoded "+" signs back to spaces:
+                                        .ToDictionary(x => x[0].Replace("+", " "), x => x[1].Replace("+", " "));
                 }
 
                 Logger.Write(Level.Debug, "FormQueue request: " + JsonConvert.SerializeObject(fieldList, Formatting.Indented));
+                Logger.Write(Level.Debug, "CurrentEditField = " + fieldList["CurrentEditField"]);
+                Logger.Write(Level.Debug, "DataQueryStatus = " + fieldList["DataQueryStatus"]);
+                Logger.Write(Level.Debug, "Label Count = " + fieldList["Number of Labels"]);
+
+                // Preparatory steps 
 
                 Profile profile = FindProfile(fieldList);
                 Printer printer = FindPrinter(fieldList);
@@ -378,34 +396,58 @@ namespace LabelCastWeb.Controllers
 
                 var desc = new LabelDescriptor(profile);
                 desc.LabelCount = GetLabelCount(fieldList);
+
+                // Index of UI field to focus (initially 0, for dbQuery like below)
+                int pageEditIndex = desc.FirstEditFieldIndex;
+
+                // Fill values in LabelDescriptor
+                
                 foreach (String key in fieldList.Keys.Except(new List<String> { "profile", "printer" }))
                 {
-                    desc.EditFieldValue(key, fieldList[key]);
+                    desc.EditFieldValue(key, HttpUtility.UrlDecode(fieldList[key]));
                 }
+                desc.CurrentEditField = fieldList["CurrentEditField"];
+                desc.DataQueryStatus = (DbQueryStatus)Convert.ToInt32(fieldList["DataQueryStatus"]);
 
-                // Database query needed?
-                if (desc.DbQueryFields.Count > 0)
+                Logger.Write(Level.Debug, "Descriptor filled out from form fields:\r\n" + JsonConvert.SerializeObject(desc, Formatting.Indented));
+
+                // Process field value / query database
+
+                desc = proc.EditFieldValueWeb(desc);
+
+                String pageMsg = "";
+                if (desc.CurrentEditField == "Number of Labels")
                 {
-                    // Trigger db-query by setting edit-field to LastSearchField
-                    desc.CurrentEditField = desc.LastSearchField;
-                    desc = proc.EditFieldValueWeb(desc);
+                    // Print label
+                    (desc, var msg) = proc.FinalizeAndPrintWeb(desc);                    
+                    if (!String.IsNullOrWhiteSpace(msg))
+                        throw new ApplicationException(msg);
+                    // Reset values
+                    desc = new LabelDescriptor(profile);
+                    pageEditIndex = 0;
+                    pageMsg = "Label printed.";
                 }
 
-                // Print label
-                (desc, var msg) = proc.FinalizeAndPrintWeb(desc);
-                if (!String.IsNullOrWhiteSpace(msg))
-                    throw new ApplicationException(msg);
+                // Update values so they propagate back to client
+
+                var entryTable = proc.GetFieldTable();
+                UpdateFieldTable(entryTable, profile, desc.DbResultFields);
 
                 // Return entire LabelEntryIE6 view with success message (no AJAX)
+
                 var entryData = new LabelStructure
                 {
-                    EntryTable = proc.GetFieldTable(),
-                    LabelDescriptor = proc.LabelDescriptor,
+                    EntryTable = entryTable,
+                    LabelDescriptor = desc,
                     ProfileList = App.Config.ProfileList.Select(p => p.Abbreviation).ToList(),
                     ActiveProfile = profile.Abbreviation,
                     PrinterList = PrinterStore.Printers.Select(p => p.Name).ToList(),
                     ActivePrinter = printer.Name,
-                    PageMessage = "Label printed."
+                    PageMessage = pageMsg,
+                    PageResultFields = desc.DbResultFields.Except(desc.DbQueryFields)
+                                                          .Except(desc.EditableFields)
+                                                          .ToDictionary(),
+                    PageEditIndex = pageEditIndex
                 };
 
                 return View("LabelEntryIE6", entryData);
@@ -560,10 +602,72 @@ namespace LabelCastWeb.Controllers
 
         int GetLabelCount(Dictionary<String, String> fieldList)
         {
-            if (!fieldList.ContainsKey("labelcount"))
-                throw new ArgumentException("Cannot determine quantity of labels to print ('labelcount' field missing).");
+            if (!fieldList.ContainsKey("Number of Labels"))
+                throw new ArgumentException("Cannot determine quantity of labels to print ('Number of Labels' field missing).");
             //
-            return Convert.ToInt32(fieldList["labelcount"]);
+            return Convert.ToInt32(fieldList["Number of Labels"]);
+        }
+
+
+        /// <summary>
+        /// Update the field-table DataTable objects with a column-value pair dictionary
+        /// from the database query.
+        /// </summary>
+        /// <param name="valueList">Column-value pairs representing table data.</param>
+        public void UpdateFieldTable(DataTable fieldTable, Profile profile, Dictionary<String, String> dataValues)
+        {
+            if (profile == null)
+                return;
+            if (dataValues == null || dataValues.Count == 0)
+                return;
+
+            // The sequence in FieldTable is: first DbQueryFields, then EditFields
+
+            // Update dbQuery fields where possible
+            foreach (String searchField in profile.SearchFields)
+            {
+                if (dataValues.ContainsKey(searchField))
+                {
+                    int idx = LocateMatchingRow(fieldTable, searchField);
+                    if (idx >= 0)
+                        fieldTable.Rows[idx]["Value"] = dataValues[searchField];
+                }
+            }
+
+            // Also update EditFields where possible
+            // (Will only update those EditFields which also exist in DbResultFields
+            // and thus were returned by database query)
+            foreach (String editField in profile.EditableFields)
+            {
+                if (dataValues.ContainsKey(editField))
+                {
+                    int idx = LocateMatchingRow(fieldTable, editField);
+                    if (idx >= 0)
+                        fieldTable.Rows[idx]["Value"] = dataValues[editField];
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Locate row index of matching field in fieldTable, if any.
+        /// </summary>
+        private int LocateMatchingRow(DataTable fieldTable, string fieldName)
+        {
+            // Columns of fieldTable: Variable, Value
+            if (!fieldTable.Columns.Contains("Variable") || !fieldTable.Columns.Contains("Value"))
+                throw new ApplicationException("Internal Error: App FieldTable has invalid structure - must have columns 'Variable' and 'Value'.");
+
+            int idx = -1;
+            for (int n = 0; n < fieldTable.Rows.Count; n++)
+            {
+                if (fieldTable.Rows[n]["Variable"].ToString() == fieldName)
+                {
+                    idx = n;
+                    break;
+                }
+            }
+            return idx;
         }
 
         #endregion

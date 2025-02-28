@@ -14,7 +14,7 @@
 
     <div class="entry">
 
-        <form method="post" action="/labels/formqueue" autocomplete="off">
+        <form id="labelEntryForm" method="post" action="/labels/formqueue" autocomplete="off">
 
             <div class="header">
                 <div class="logogroup">
@@ -55,32 +55,51 @@
             </div>
 
             <table class="entryTable">
-                @for (int i = 0; i < @Model.EntryTable.Rows.Count; i++)
+                @for (int i = 0; i < Model.EntryTable.Rows.Count; i++)
                 {
                     String colID = "col" + i.ToString();
                     String varName = Model.EntryTable.Rows[i][0].ToString() ?? "";
-                    if (varName == "Number of Labels")
-                        varName = "labelcount";
+                    //if (varName == "Number of Labels")
+                    //    varName = "labelcount";
                     String value = Model.EntryTable.Rows[i][1].ToString() ?? "";
                     <tr>
                         <td class="col1">@Model.EntryTable.Rows[i][0].ToString()</td>
-                        <td class="col2"><input type="text" id="@colID" name="@varName" value="@value" /></td>
+                        <td class="col2">
+                            <input type="text" id="@colID" name="@varName" value="@value" onblur="inputLostFocus()" onfocus="inputGotFocus()" onkeydown="inputKeyDown()" />
+                        </td>
                     </tr>
                 }
             </table>
+
+            <input type="hidden" name="FirstSearchField" id="FirstSearchField" value="@Model.LabelDescriptor.FirstSearchField" />
+            <input type="hidden" name="LastSearchField" id="LastSearchField" value="@Model.LabelDescriptor.LastSearchField" />
+            <input type="hidden" name="CurrentEditField" id="CurrentEditField" value="@Model.LabelDescriptor.CurrentEditField" />
+            <input type="hidden" name="FirstEditFieldIndex" id="FirstEditFieldIndex" value="@((int)Model.LabelDescriptor.FirstEditFieldIndex)" />
+            <input type="hidden" name="PageEditIndex" id="PageEditIndex" value="@Model.PageEditIndex" />
+
+            <input type="hidden" name="DataQueryStatus" id="DataQueryStatus" value="@((int)Model.LabelDescriptor.DataQueryStatus)" />
+
+            @foreach(var entry in Model.PageResultFields)
+            {
+            <input type="hidden" name="@entry.Key" id="@entry.Key" value="@entry.Value" class="dbResult" />
+            }
 
             <p>&nbsp;</p>
             <div id="errorLabel"></div>
             <div id="msgLabel">@Model.PageMessage</div>
 
             <div class="btngroup">
-                <button type="submit" id="btnPrint">PRINT</button>
+                <button type="button" id="btnClear" onclick="clearButtonClick()">Clear</button>
+                <button type="button" id="btnPrint" onclick="printButtonClick()">Print</button>
             </div>
+
+            <div id="debugMsg"></div>
 
         </form>
 
     </div>
 
+    <script src="~/js/polyfillsIE.js"></script>
     <script src="~/js/labelentryIE6.js"></script>
 
 </body>

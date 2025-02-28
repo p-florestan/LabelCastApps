@@ -8,7 +8,7 @@ var dbSUCCESS = 2;
 var dbFAILED = 3;
 var dbStatus = ['NoQuery', 'Pending', 'Success', 'Failed'];
 
-var NoDebug = false;
+var NoDebug = true;
 
 
 document.addEventListener("DOMContentLoaded", (event) => {
@@ -87,10 +87,20 @@ document.addEventListener("DOMContentLoaded", (event) => {
     function inputKeyDown(event) {
         if (event.key === 'Enter') {
             var idx = Number(event.target.id.substring(3));
-            if (idx < mInputRowCount - 1) {
+
+            // numeric query? then position after dbQuery fields
+            var fieldValue = event.target.value;
+            var fieldName = event.target.getAttribute('name');
+            if (fieldName === mDescriptor.FirstSearchField && isNumber(fieldValue)) {
+                var nextInput = document.querySelector('#col' + mDescriptor.FirstEditFieldIndex.toString());
+                nextInput.focus();
+            }
+
+            else if (idx < mInputRowCount - 1) {
                 var nextInput = document.querySelector('#col' + (idx + 1).toString());
                 nextInput.focus();
             }
+
             else {
                 // Pressing ENTER on last input prints the label.
                 // The last input is always 'Number of Labels'.
@@ -100,6 +110,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
         }
     }
 
+    // Record current input element upon LostFocus
     function inputLostFocus(event) {
         if (mNavActive) {
             mCurrentInput = event.target.id;
@@ -297,7 +308,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
 
     function isNumber(str) {
-        if (typeof str != "string") return false // we only process strings!
+        if (typeof str != "string" ) return false // we only process strings!
         return !isNaN(str) && !isNaN(parseFloat(str))
     }
 
@@ -337,6 +348,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
         mDescriptor.CurrentEditField = '';
         mDescriptor.DataQueryStatus = 0;
+        mDescriptor.IsNumericCodeQuery = false;
         mDescriptor.LabelCount = 1;
         mDescriptor.ReadyToPrint = false;
 
