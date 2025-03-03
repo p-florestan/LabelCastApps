@@ -1,39 +1,53 @@
-**Overview**
+﻿**Overview**
 
-LabelCast is software which allows printing of barcode labels to Zebra label printers, based on data manually input or supplied by a database. Typically, you would input one or more data fields, which are used to look up additional information in a database and then combined to print a barcode label.
+LabelCast is software which allows printing of barcode labels to label printers supporting ZPL (Zebra Printer Language). This includes all printers from the company Zebra, bu other manufacturers such as TSC (Taiwan Semiconductor), Intermec (Honeywell), Sato, Bixolon and Cab also offer printers which support or can emulate ZPL.
 
-At this time, only label printers from the company Zebra are supported.
+The software UI allows you to select a barcode label design and then print by:
+
+- manually typing variable data into the user interface.
+- selecting predefined data from a database.
+- both – i.e. selecting data from a database and manually inputting further details
 
 The software comes in two flavors:
 
-*   Windows desktop application
-*   Web application
+- Windows desktop application
+- Web application
 
-If you have a single workstation with a dedicated Zebra label printer, or just a few workstations, each of which has their own label printer where each workstation has individual label needs, the simplest solution is to install the desktop application on each workstation.
+If you have a single workstation with a dedicated label printer, or just a few workstations with individual label needs, the simplest solution is to install the desktop application on each workstation.
 
-If multiple users need to print the same type of label, or if they share printers, or if diverse types of devices exist which need to print labels, the web application is a better fit.
+If multiple users need to print the same type of label, or if they share printers, if diverse types of devices exist which need to print labels, or you want to manage label printing for geographically separate offices, the web application is a better fit.
 
-**Why This Application?**
+**Intended Use**
 
-A lot of labeling software exists. However, most of them are intended for general purpose labelling and are using Windows printer drivers. This is fine, but Zebra printers are special case – using the Windows printer driver to print barcode labels often results in barcodes which cannot be properly read in all barcode readers.
+This software is intended to print labels containing barcodes to a networked barcode printer.
 
-To properly print barcodes on Zebra printers, the native Zebra printer language ZPL must be employed to send the label. This app is intended to do just that.
+General-purpose labelling software usually converts the label data into an image and lets the printer driver translate this to pixels for the printer. Barcodes do not print properly this way, however, on typical industrial label printers from Zebra or TSC etc. – these printers often have much lower resolution than a typical modern laser or inkjet printer, resulting in barcodes which cannot be reliably read by a barcode reader.
+
+The advantage of the lower resolution is speedy output of complex barcode labels. But the only way to create properly printed barcodes on such printers is to use their proprietary printer language, such as ZPL.
+
+The LabelCast software directly sends ZPL commands to the printer and thereby creates barcodes which can be reliably read by barcode readers.
 
 **Label Design and Workflow**
 
-LabelCast does not support designing label templates. This must be done by a separate program, such as the free _Zebra Designer_ from the Zebra website.
+LabelCast does not support designing label templates. This must be done by a separate program, such as the free program *Zebra Designer for Developers* from the Zebra website.
 
 The work flow is as follows:
 
-1.  Install Zebra Designer for Developers
-2.  Create a label design
-3.  Save the label design as a print template file – a text file containing Zebra ZPL commands.
-4.  Install LabelCast desktop or web application.
-5.  Configure LabelCast to use your label design, specifying database details and fields to be input by the user.
-6.  Print the labels using either the desktop app or web application.
+1. Install Zebra Designer for Developers
+1. Create a label design
+1. Save the label design as a print template file – a text file containing Zebra ZPL commands.
+1. Install LabelCast desktop or web application.
+1. Configure LabelCast to use your label design, specifying database details and fields to be input by the user.
+1. Print the labels using either the desktop app or web application.
 
 **HTTP API for JSON and XML**
 
-You can also configure LabelCast to print labels using a HTTP API. You can submit label data in XML or JSON format. Optionally, the label data format can be validated through a XML / JSON schema.
+You can also configure LabelCast to print labels using HTTP API requests. You can submit label data in XML or JSON format. Optionally, the label data format can be validated through a XML / JSON schema.
 
-This is only supported when the web application has been installed.
+You must install the web application to take advantage of this feature.
+
+**Detailed User Manual**
+
+A detailed user manual is contained in the /docs folder of the repository.
+
+
