@@ -8,7 +8,7 @@ body {
 .entry {
     margin-block-start: 2em;
     margin-inline-start: 2em;
-    max-width: 48ch;
+    max-width: 52ch;
     border-radius: 1rem;
     background-color: #f1f1f1;
     padding: 1rem 1rem 3rem 1rem;
@@ -18,7 +18,7 @@ body {
     position: relative;
     display: block;
     border-radius: 0.3rem;
-    width: 48ch;
+    width: 52ch;
     margin-bottom: 1ch;
 }
 
@@ -53,13 +53,13 @@ body {
     font-size: medium;
     background-color: royalblue;
     color: white;
-    width: 23.8ch;
+    width: 26.8ch;
     border-radius: 0.25em;
 }
 
     .entry header .printers {
         position: relative;
-        width: 48ch;
+        width: 52ch;
     }
 
     .entry form {
@@ -101,11 +101,13 @@ body {
 
     .entryTable .col2 {
         border: 1px solid grey;
-        min-width: 24ch;
+        min-width: 28ch;
+        padding: 0;
     }
 
         .entryTable input {
-            padding: 0.2rem 1rem 0.2rem 0.5rem;
+            padding: 0.2rem 0.2rem 0.2rem 0.5rem;
+            width: 100%;
             box-sizing: border-box;
             border: none;
         }
