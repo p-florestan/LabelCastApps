@@ -92,6 +92,14 @@ namespace LabelCast
         }
 
         /// <summary>
+        /// Currently active profile
+        /// </summary>
+        public Profile? ActiveProfile
+        {
+            get { return mProfile; }
+        }
+
+        /// <summary>
         /// Printer associated with this LabelProcessor instance.
         /// (Profiles define a default printer, but users can modify.)
         /// </summary>
@@ -107,7 +115,8 @@ namespace LabelCast
 
         /// <summary>
         /// Generate a DataTable representation of the fields which must be 
-        /// present in the form to fill out (search fields and editable fields)
+        /// present in the form to fill out (search fields and editable fields),
+        /// with empty values.
         /// </summary>
         public DataTable GetFieldTable()
         {

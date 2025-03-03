@@ -1,6 +1,6 @@
 ﻿@using LabelCastWeb.Models;
 @using Newtonsoft.Json;
-@model LabelStructure;
+@model String;
 <!DOCTYPE html>
 <html>
 <head>
@@ -22,6 +22,7 @@
                 </tr>
             </table>
         </div>
+        <div id="msgLabel">@Model</div>
     </div>
     <script src="~/js/splashIE6.js"></script>
 </body>

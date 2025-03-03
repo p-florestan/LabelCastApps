@@ -168,6 +168,10 @@ function clearInputFields() {
     document.querySelector('input[name="DataQueryStatus"]').value = 0;
     document.querySelector('input[name="PageEditIndex"]').value = 0;
 
+    var msgLabel = document.getElementById('msgLabel');
+    if (msgLabel)
+        msgLabel.innerText = '';
+
     mNavActive = false;
     mFirstInput.focus();
     mNavActive = true;

@@ -80,6 +80,7 @@ namespace LabelCastWeb.Controllers
         [HttpGet("main/{browser}")]
         public IActionResult ShowSplashScreenIE(String browser)
         {
+            Logger.Write(Level.Debug, "Splash screen for " + browser);
             if (browser.Trim().ToLower() == "ie8")
                 return View("SplashIE8");
             else if (browser.Trim().ToLower() == "ie6")
@@ -355,7 +356,7 @@ namespace LabelCastWeb.Controllers
         #endregion
 
         #region Public API - Form Request Methods (IE6)
-
+                
         // These controller methods work like a classic ASP site without Ajax - every request
         // results in a full page view.
 
@@ -369,108 +370,256 @@ namespace LabelCastWeb.Controllers
         [HttpPost("formqueue")]
         public async Task<IActionResult> SubmitLabelHtmlFormClassic()
         {
+            LabelProcessor proc;
+            DataTable entryTable;
+            Dictionary<String, String> fieldList = new Dictionary<String, String>();
+
             try
             {
-                Dictionary<String, String> fieldList = new Dictionary<String, String>();
+                fieldList = await ConvertRequestBody();
+                proc = InstantiateLabelProcessor(fieldList);
+                entryTable = proc.GetFieldTable();
+            }
+            catch (Exception ex)
+            {
+                // Early return - basic error due to invalid HTML form data
+                return View("SplashIE6", "Invalid input form data: " + ex.Message);
+            }
 
-                // Read the entire request body as a single string
-                using (var reader = new StreamReader(Request.Body))
-                {
-                    String formData = await reader.ReadToEndAsync();
-                    fieldList = formData.Split('&')
-                                        .Select(x => x.Split('='))
-                                        // replacing html-encoded "+" signs back to spaces:
-                                        .ToDictionary(x => x[0].Replace("+", " "), x => x[1].Replace("+", " "));
-                }
-
+            try 
+            { 
                 Logger.Write(Level.Debug, "FormQueue request: " + JsonConvert.SerializeObject(fieldList, Formatting.Indented));
-                Logger.Write(Level.Debug, "CurrentEditField = " + fieldList["CurrentEditField"]);
-                Logger.Write(Level.Debug, "DataQueryStatus = " + fieldList["DataQueryStatus"]);
-                Logger.Write(Level.Debug, "Label Count = " + fieldList["Number of Labels"]);
 
-                // Preparatory steps 
+                LabelDescriptor desc = proc.LabelDescriptor;
+                desc = UpdateDescriptorFromFieldList(desc, fieldList);
 
-                Profile profile = FindProfile(fieldList);
-                Printer printer = FindPrinter(fieldList);
-                LabelProcessor proc = new LabelProcessor(profile, printer);
-
-                var desc = new LabelDescriptor(profile);
-                desc.LabelCount = GetLabelCount(fieldList);
-
-                // Index of UI field to focus (initially 0, for dbQuery like below)
-                int pageEditIndex = desc.FirstEditFieldIndex;
-
-                // Fill values in LabelDescriptor
-                
-                foreach (String key in fieldList.Keys.Except(new List<String> { "profile", "printer" }))
-                {
-                    desc.EditFieldValue(key, HttpUtility.UrlDecode(fieldList[key]));
-                }
-                desc.CurrentEditField = fieldList["CurrentEditField"];
-                desc.DataQueryStatus = (DbQueryStatus)Convert.ToInt32(fieldList["DataQueryStatus"]);
-
-                Logger.Write(Level.Debug, "Descriptor filled out from form fields:\r\n" + JsonConvert.SerializeObject(desc, Formatting.Indented));
-
-                // Process field value / query database
-
-                desc = proc.EditFieldValueWeb(desc);
-
+                bool isDbQuery = false;
                 String pageMsg = "";
                 if (desc.CurrentEditField == "Number of Labels")
                 {
                     // Print label
-                    (desc, var msg) = proc.FinalizeAndPrintWeb(desc);                    
+                    entryTable = UpdateEntryTableFromFieldList(entryTable, fieldList);
+                    (desc, var msg) = proc.FinalizeAndPrintWeb(desc);               
                     if (!String.IsNullOrWhiteSpace(msg))
                         throw new ApplicationException(msg);
-                    // Reset values
-                    desc = new LabelDescriptor(profile);
-                    pageEditIndex = 0;
-                    pageMsg = "Label printed.";
+                    // reset values
+                    entryTable = proc.GetFieldTable();
+                    isDbQuery = false;
+                }
+                else
+                {
+                    // Process field value / query database
+                    desc = proc.EditFieldValueWeb(desc);
+                    entryTable = UpdateEntryTableFromDbQuery(entryTable, proc.ActiveProfile, desc.DbResultFields);
+                    isDbQuery = true;
                 }
 
-                // Update values so they propagate back to client
-
-                var entryTable = proc.GetFieldTable();
-                UpdateFieldTable(entryTable, profile, desc.DbResultFields);
-
-                // Return entire LabelEntryIE6 view with success message (no AJAX)
-
-                var entryData = new LabelStructure
-                {
-                    EntryTable = entryTable,
-                    LabelDescriptor = desc,
-                    ProfileList = App.Config.ProfileList.Select(p => p.Abbreviation).ToList(),
-                    ActiveProfile = profile.Abbreviation,
-                    PrinterList = PrinterStore.Printers.Select(p => p.Name).ToList(),
-                    ActivePrinter = printer.Name,
-                    PageMessage = pageMsg,
-                    PageResultFields = desc.DbResultFields.Except(desc.DbQueryFields)
-                                                          .Except(desc.EditableFields)
-                                                          .ToDictionary(),
-                    PageEditIndex = pageEditIndex
-                };
-
+                var entryData = PrepareLabelStructure(proc, entryTable, pageMsg, isDbQuery);
                 return View("LabelEntryIE6", entryData);
+
             }
             catch (DataException ex)
             {
-                // HTTP 422 Unprocessable Entity
-                return StatusCode(422, ex.Message);
+                // Database error
+                var entryData = PrepareLabelStructure(proc, entryTable, ex.Message, true, true);
+                return View("LabelEntryIE6", entryData);
             }
             catch (ArgumentException ex)
             {
-                // Invalid data submitted - HTTP 406 Not Acceptable
-                return StatusCode(406, ex.Message);
+                // Invalid data submitted
+                var entryData = PrepareLabelStructure(proc, entryTable, ex.Message, true, true);
+                return View("LabelEntryIE6", entryData);
             }
             catch (Exception ex)
             {
                 // Any other error - HTTP 500 Internal Server Error
-                return StatusCode(500, ex.Message);
+                var entryData = PrepareLabelStructure(proc, entryTable, ex.Message, true, true);
+                return View("LabelEntryIE6", entryData);
             }
         }
 
-        #endregion
+
+        /// <summary>
+        /// Update entry table values (UI field table) from HTML form data.
+        /// This is mainly needed when an exception is thrown, so that the field values are
+        /// shown in the UI along with the error message.
+        /// </summary>
+        private DataTable UpdateEntryTableFromFieldList(DataTable entryTable, Dictionary<string, string> fieldList)
+        {
+            // Update any field which you can find in 'entryTable'
+
+            foreach (String searchField in fieldList.Keys)
+            {
+                int idx = LocateMatchingRow(entryTable, searchField);
+                if (idx >= 0)
+                    entryTable.Rows[idx]["Value"] = fieldList[searchField];
+            }
+
+            return entryTable;
+        }
+
+
+
+        /// <summary>
+        /// Fill out values in LabelDescriptor from the 'fieldList' obtained through the HTML form.
+        /// </summary>
+        /// <param name="desc">Current LabelDescriptor</param>
+        /// <param name="fieldList">Key-value pairs representing field values from HTML form</param>
+        /// <returns></returns>
+        private LabelDescriptor UpdateDescriptorFromFieldList(LabelDescriptor desc, Dictionary<string, string> fieldList)
+        {
+            desc.LabelCount = GetLabelCount(fieldList);
+
+            foreach (String key in fieldList.Keys.Except(new List<String> { "profile", "printer" }))
+            {
+                desc.EditFieldValue(key, HttpUtility.UrlDecode(fieldList[key]));
+            }
+            desc.CurrentEditField = fieldList["CurrentEditField"];
+            desc.DataQueryStatus = (DbQueryStatus)Convert.ToInt32(fieldList["DataQueryStatus"]);
+
+            Logger.Write(Level.Debug, "Descriptor filled out from form fields:\r\n" + JsonConvert.SerializeObject(desc, Formatting.Indented));
+
+            return desc;
+
+        }
+
+
+
+        /// <summary>
+        /// Convert web request body (www-url-formencoded) to dictionary object.
+        /// </summary>
+        private async Task<Dictionary<String, String>> ConvertRequestBody()
+        {
+            Dictionary<String, String> fieldList = new Dictionary<String, String>();
+            // Read the entire request body as a single string
+            using (var reader = new StreamReader(Request.Body))
+            {
+                String formData = await reader.ReadToEndAsync();
+                fieldList = formData.Split('&')
+                                    .Select(x => x.Split('='))
+                                     // replace html-encoded "+" signs back to spaces:
+                                    .ToDictionary(x => x[0].Replace("+", " "), 
+                                                  x => x[1].Replace("+", " "));
+            }
+
+            return fieldList;
+        }
+
+
+        /// <summary>
+        /// Instantiate label processor using profile and printer information in 'fieldList'
+        /// </summary>
+        private LabelProcessor InstantiateLabelProcessor(Dictionary<string, string> fieldList)
+        {
+            Profile profile = FindProfile(fieldList);
+            Printer printer = FindPrinter(fieldList);
+            LabelProcessor proc = new LabelProcessor(profile, printer);
+            return proc;
+        }
+
+
+
+        /// <summary>
+        /// Update the field-table DataTable objects with a column-value pair dictionary
+        /// from the database query.
+        /// </summary>
+        /// <param name="fieldTable">DataTable showing input data to user</param>
+        /// <param name="profile">Active profile</param>
+        /// <param name="dataValues">Database query result data</param>
+        private DataTable UpdateEntryTableFromDbQuery(DataTable fieldTable, Profile? profile, Dictionary<String, String> dataValues)
+        {
+            if (profile == null)
+                return fieldTable;
+            if (dataValues == null || dataValues.Count == 0)
+                return fieldTable;
+
+            // The sequence in FieldTable is: first DbQueryFields, then EditFields
+
+            // Update dbQuery fields where possible
+            foreach (String searchField in profile.SearchFields)
+            {
+                if (dataValues.ContainsKey(searchField))
+                {
+                    int idx = LocateMatchingRow(fieldTable, searchField);
+                    if (idx >= 0)
+                        fieldTable.Rows[idx]["Value"] = dataValues[searchField];
+                }
+            }
+
+            // Also update EditFields where possible (only update those EditFields which also
+            // exist in DbResultFields and thus were returned by database query)
+            foreach (String editField in profile.EditableFields)
+            {
+                if (dataValues.ContainsKey(editField))
+                {
+                    int idx = LocateMatchingRow(fieldTable, editField);
+                    if (idx >= 0)
+                        fieldTable.Rows[idx]["Value"] = dataValues[editField];
+                }
+            }
+
+            return fieldTable;
+        }
+
+
+
+        /// <summary>
+        /// Prepare label structure data for HTML view.
+        /// </summary>
+        /// <param name="proc"></param>
+        /// <param name="entryTable"></param>
+        /// <param name="pageMsg"></param>
+        /// <param name="isDbQuery"></param>
+        /// <returns></returns>
+        private LabelStructure PrepareLabelStructure(LabelProcessor proc,
+                             DataTable entryTable,
+                             String pageMsg,
+                             bool isDbQuery,
+                             bool focusTopCell = false)
+        {
+            int pageEditIndex = 0;
+            var desc = proc.LabelDescriptor;
+            Profile? profile = proc.ActiveProfile;
+            Printer? printer = proc.ActivePrinter;
+
+            if (isDbQuery)
+            {
+                if (focusTopCell)
+                    pageEditIndex = 0;
+                else 
+                    pageEditIndex = desc.FirstEditFieldIndex;
+            }
+            else
+            {
+                proc = new LabelProcessor(profile, printer);
+                desc = proc.LabelDescriptor;
+                pageMsg = "Label printed.";
+            }
+
+            // Fill out data for view
+            var entryData = new LabelStructure
+            {
+                EntryTable = entryTable,
+                LabelDescriptor = desc,
+                ProfileList = App.Config.ProfileList.Select(p => p.Abbreviation).ToList(),
+                ActiveProfile = proc.ActiveProfile?.Abbreviation ?? "",
+                PrinterList = PrinterStore.Printers.Select(p => p.Name).ToList(),
+                ActivePrinter = proc.ActivePrinter?.Name ?? "",
+                PageMessage = pageMsg,
+                PageResultFields = desc.DbResultFields.Except(desc.DbQueryFields)
+                                                      .Except(desc.EditableFields)
+                                                      .ToDictionary(),
+                PageEditIndex = pageEditIndex
+            };
+
+            return entryData;
+        }
+
+
         
+
+        #endregion
+
 
         #region Internal Methods - Error Handlers
 
@@ -600,7 +749,7 @@ namespace LabelCastWeb.Controllers
         }
 
 
-        int GetLabelCount(Dictionary<String, String> fieldList)
+        private int GetLabelCount(Dictionary<String, String> fieldList)
         {
             if (!fieldList.ContainsKey("Number of Labels"))
                 throw new ArgumentException("Cannot determine quantity of labels to print ('Number of Labels' field missing).");
@@ -608,45 +757,6 @@ namespace LabelCastWeb.Controllers
             return Convert.ToInt32(fieldList["Number of Labels"]);
         }
 
-
-        /// <summary>
-        /// Update the field-table DataTable objects with a column-value pair dictionary
-        /// from the database query.
-        /// </summary>
-        /// <param name="valueList">Column-value pairs representing table data.</param>
-        public void UpdateFieldTable(DataTable fieldTable, Profile profile, Dictionary<String, String> dataValues)
-        {
-            if (profile == null)
-                return;
-            if (dataValues == null || dataValues.Count == 0)
-                return;
-
-            // The sequence in FieldTable is: first DbQueryFields, then EditFields
-
-            // Update dbQuery fields where possible
-            foreach (String searchField in profile.SearchFields)
-            {
-                if (dataValues.ContainsKey(searchField))
-                {
-                    int idx = LocateMatchingRow(fieldTable, searchField);
-                    if (idx >= 0)
-                        fieldTable.Rows[idx]["Value"] = dataValues[searchField];
-                }
-            }
-
-            // Also update EditFields where possible
-            // (Will only update those EditFields which also exist in DbResultFields
-            // and thus were returned by database query)
-            foreach (String editField in profile.EditableFields)
-            {
-                if (dataValues.ContainsKey(editField))
-                {
-                    int idx = LocateMatchingRow(fieldTable, editField);
-                    if (idx >= 0)
-                        fieldTable.Rows[idx]["Value"] = dataValues[editField];
-                }
-            }
-        }
 
 
         /// <summary>
