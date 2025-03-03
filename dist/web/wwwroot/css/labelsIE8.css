@@ -91,12 +91,15 @@ body {
 }
 
 #btnPrint {
+    float: right;
+}
+
+button {
     background-color: royalblue;
     color: white;
     padding: 0.5em 2em;
     border: none;
     font: inherit;
-    float: right;
 }
 
 .entryTable {

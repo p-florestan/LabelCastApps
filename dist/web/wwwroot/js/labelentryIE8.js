@@ -1,5 +1,10 @@
 ﻿
+// Includes "polyfillsIE.js"
+
+// --------------------------------------------------------------------------------------------------------
 // Javascript code for IE8 browser
+// --------------------------------------------------------------------------------------------------------
+
 //
 // Differences addressed:
 //   Polyfill for JSON.parse/stringify    (json2.js)
@@ -23,129 +28,6 @@ var dbStatus = ['NoQuery', 'Pending', 'Success', 'Failed'];
 var NoDebug = true;
 
 
-// --------------------------------------------------------------------------------------------------------
-//   Polyfills for IE
-// --------------------------------------------------------------------------------------------------------
-
-
-if (!document.querySelectorAll)
-    document.querySelectorAll = function (selector) {
-        var head = document.documentElement.firstChild;
-        var styleTag = document.createElement("STYLE");
-        head.appendChild(styleTag);
-        document.__qsResult = [];
-
-        styleTag.styleSheet.cssText = selector + "{x:expression(document.__qsResult.push(this))}";
-        window.scrollBy(0, 0);
-        head.removeChild(styleTag);
-
-        var result = [];
-        for (var i in document.__qsResult)
-            result.push(document.__qsResult[i]);
-        return result;
-    }
-
-
-if (!document.querySelector)
-    document.querySelector = function (selector) {
-        var head = document.documentElement.firstChild;
-        var styleTag = document.createElement("STYLE");
-        head.appendChild(styleTag);
-        document.__qsResult = [];
-
-        styleTag.styleSheet.cssText = selector + "{x:expression(document.__qsResult.push(this))}";
-        window.scrollBy(0, 0);
-        head.removeChild(styleTag);
-
-        // Return first result only               
-        return document.__qsResult[0] || null;
-    }
-
-
-// Obtain all "own" properties of an object
-function getKeys(obj) {
-    var keys = [];
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            keys.push(key);
-        }
-    }
-    return keys;
-}
-
-// IE8 does not support trim() function
-if (typeof String.prototype.trim !== 'function') {
-    String.prototype.trim = function () {
-        return this.replace(/^\s+|\s+$/g, '');
-    };
-}
-
-// IE does not support classList array property.
-// We need to use 'className' property instead which takes 
-// a space-separated list of classes. 
-function removeClass(htmlElement, cssClass) {
-
-    cssClass = cssClass.trim();
-    htmlElement.className = htmlElement.className.trim();
-    var cssLen = cssClass.length;
-    var classLen = htmlElement.className.length;
-
-    if (htmlElement.className == cssClass) {
-        htmlElement.className = '';
-        //console.log('case 1: className = css, result = "' + htmlElement.className + '"');
-    }
-    else if (htmlElement.className.substr(classLen - cssLen - 1) == ' ' + cssClass) {
-        htmlElement.className = htmlElement.className.substr(0, classLen - cssLen - 1);
-        //console.log('case 2: begins with css, result = "' + htmlElement.className + '"');
-    }
-    else if (htmlElement.className.substr(0, cssLen + 1) == cssClass + ' ') {
-        htmlElement.className = htmlElement.className.substr(cssLen + 1);
-        //console.log('case 3: ends with css, result = "' + htmlElement.className + '"');
-    }
-    else {
-        var idx = htmlElement.className.indexOf(' ' + cssClass + ' ');
-        if (idx >= 0) {
-            htmlElement.className = htmlElement.className.substr(0, idx + 1) + htmlElement.className.substr(idx + 1 + cssLen + 1);
-            //console.log('case 4: in the middle, result = "' + htmlElement.className + '"');
-        }
-        //else 
-            //console.log('case 5: not present, result = "' + htmlElement.className + '"');
-    }
-}
-
-/*
-//
-// Tests for the above "removeClass" function
-//
-function removeClassTest() {
-    var b = document.querySelector('body');
-
-    console.log('-- Test Case 1 -- (equal)');
-    b.className = 'selected';
-    console.log('className before: ' + b.className);
-    removeClass(b, 'selected');
-
-    console.log('-- Test Case 2 -- (begins with)');
-    b.className = 'selected bold fancy';
-    console.log('className before: ' + b.className);
-    removeClass(b, 'selected');
-
-    console.log('-- Test Case 3 -- (ends with)');
-    b.className = 'bold fancy selected';
-    console.log('className before: ' + b.className);
-    removeClass(b, 'selected');
-
-    console.log('-- Test Case 4 -- (in the middle)');
-    b.className = 'bold fancy selected clean muddled';
-    console.log('className before: ' + b.className);
-    removeClass(b, 'selected');
-
-    console.log('-- Test Case 5 -- (not present)');
-    b.className = 'bold fancy clean';
-    console.log('className before: ' + b.className);
-    removeClass(b, 'selected');
-}
-*/
 
 // --------------------------------------------------------------------------------------------------------
 //   JS for Label Entry
@@ -320,11 +202,21 @@ function removeClassTest() {
 
         var wildCardsPresent = false;
         mDescriptor.CurrentEditField = currentField;
+        var firstInputValue = mInputList[0].value;
 
-        // Determine if this is a database-query
-        if (currentField == mDescriptor.LastSearchField) {
-            debugPrint('Edit results in a database query');
+        if (currentField === mDescriptor.FirstSearchField && isNumber(firstInputValue)) {
+            // Is this going to be a numeric code query?
+            // The first input field is also "FirstSearchField" - if its value is numeric it's a num query.
+            debugPrint('Edit results in a numerice code db query');
             mDescriptor.DataQueryStatus = dbPENDING;
+            mDescriptor.IsNumericCodeQuery = true;
+        }
+
+        else if (currentField == mDescriptor.LastSearchField) {
+            // Is this going to be a regular item database-query?
+            debugPrint('Edit results in a regular database query');
+            mDescriptor.DataQueryStatus = dbPENDING;
+            mDescriptor.IsNumericCodeQuery = false;
         }
 
         for (var n = 0; n < mInputList.length; n++) {
@@ -354,15 +246,41 @@ function removeClassTest() {
         return (wildCardsPresent && mDescriptor.DataQueryStatus == dbPENDING);
     }
 
+
+
     // Update the values in mDescrptor from server response data.
     // This only updates database query results and ReadyToPrint prop - we cannot just replace
     // mDescriptor with the response because server responses may return out of order
     function updateResultFields(responseText, currentField) {
         var respData = JSON.parse(responseText);
 
-        // Determine if this is a database-query
-        // Only if so, we update db query status and result fields
-        if (currentField == respData.LastSearchField) {
+        mDescriptor.CurrentEditField = respData.CurrentEditField;
+
+        if (mDescriptor.CurrentEditField === respData.FirstSearchField && respData.IsNumericCodeQuery) {
+            // Was this a numeric code query?
+
+            mDescriptor.DataQueryStatus = respData.DataQueryStatus;
+            mDescriptor.DataQueryStatusText = respData.DataQueryStatusText;
+
+            if (mDescriptor.DataQueryStatus === dbSUCCESS) {
+                var keys = getKeys(mDescriptor.DbResultFields);
+                for (var n = 0; n < keys.length; n++) {
+                    mDescriptor.DbResultFields[keys[n]] = respData.DbResultFields[keys[n]];
+                }
+                // update what is shown in UI
+                updateInputsFromDbResult();
+            }
+            else if (mDescriptor.DataQueryStatus === dbFAILED) {
+                debugPrint('DbQuery failure. Clear dbTimer');
+                dbTimerIdx = 0;
+            }
+
+            // reset NumericCodeQuery flag
+            mDescriptor.IsNumericCodeQuery = false;
+        }
+        else if (currentField == respData.LastSearchField) {
+            // Was this a regular item database-query?
+            // Only if so, we update db query status and result fields
 
             mDescriptor.DataQueryStatus = respData.DataQueryStatus;
             mDescriptor.DataQueryStatusText = respData.DataQueryStatusText;
@@ -377,11 +295,14 @@ function removeClassTest() {
                 debugPrint('DbQuery failure. Clear dbTimer');
                 dbTimerIdx = 0;
             }
+
+            // update what is shown in UI
+            updateInputsFromDbResult();
         }
 
-        // update currently edited field
-        if (mDescriptor.EditableFields.hasOwnProperty(currentField)) {
-            mDescriptor.EditableFields[currentField] = respData.EditableFields[currentField];
+        // update the field which this response concerns:
+        if (mDescriptor.EditableFields.hasOwnProperty(mDescriptor.CurrentEditField)) {
+            mDescriptor.EditableFields[mDescriptor.CurrentEditField] = respData.EditableFields[mDescriptor.CurrentEditField];
         }
 
         mDescriptor.ErrorMessage = respData.ErrorMessage;
@@ -398,6 +319,22 @@ function removeClassTest() {
         }
 
         debugStatusShow();
+    }
+
+
+    // Update input elements in HTML from data returned in DbResultFields.
+    // This always updates DbQueryFields, and also any EditFields (if they are both
+    // Edit + DbResult fields)
+    function updateInputsFromDbResult() {
+
+        for (let n = 0; n < mInputList.length; n++) {
+
+            var fieldName = mInputList[n].getAttribute('name');
+
+            if (mDescriptor.DbResultFields.hasOwnProperty(fieldName)) {
+                mInputList[n].value = mDescriptor.DbResultFields[fieldName];
+            }
+        }
     }
 
 
@@ -421,6 +358,7 @@ function removeClassTest() {
 
         mDescriptor.CurrentEditField = '';
         mDescriptor.DataQueryStatus = 0;
+        mDescriptor.IsNumericCodeQuery = false;
         mDescriptor.LabelCount = 1;
         mDescriptor.ReadyToPrint = false;
 
@@ -825,16 +763,6 @@ function removeClassTest() {
     }
 
 
-
-
-
     
 })();
-
-
-
-
-
-
-
 
