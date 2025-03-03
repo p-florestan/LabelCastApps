@@ -312,6 +312,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
         return !isNaN(str) && !isNaN(parseFloat(str))
     }
 
+
     // Update input elements in HTML from data returned in DbResultFields.
     // This always updates DbQueryFields, and also any EditFields (if they are both
     // Edit + DbResult fields)
@@ -435,6 +436,9 @@ document.addEventListener("DOMContentLoaded", (event) => {
 
     function createOverlay(options) {
 
+        console.log('display field = ' + mDescriptor.DisplayField)
+        console.log('options = ' + JSON.stringify(options));
+
         var displayCol = mDescriptor.DisplayField;
 
         // Create inner HTML
@@ -443,7 +447,10 @@ document.addEventListener("DOMContentLoaded", (event) => {
             html += '<li class="listbox-item" tabindex="-1">' + options[j][displayCol] + '</li>';
         }
         html += '</ul>'
-        document.querySelector('#overlay').innerHTML = html;
+
+        var overlay = document.querySelector('#overlay');
+        overlay.innerHTML = html;
+        overlay.style.display = 'block';
 
         // Add interactivity
 
@@ -509,6 +516,8 @@ document.addEventListener("DOMContentLoaded", (event) => {
             mDescriptor.DbResultFields[keys[n]] = selectedData[keys[n]];
         }
 
+        setTimeout(updateInputsFromDbResult(), 100);
+
         mDescriptor.DataQueryStatus = dbSUCCESS;
         hideOverlay();        
     }
@@ -530,7 +539,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
             if (updateDescriptor(currentField)) {
                 // User has entered wildcards (% signs) - display options
                 debugPrint('Client: Searching options for "' + currentField + "' = " + inputBox.value);
-                setTimeout(showOverlay, 100);
+                setTimeout(showOverlay, 1);
                 sendGetRequest('/labels/search?query=' + encodeURIComponent(JSON.stringify(mDescriptor.DbQueryFields)) + '&profile=' + mActiveProfile);
             }
             else {

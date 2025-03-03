@@ -5,10 +5,10 @@
   "DatabaseType": "SQLite",
   "DbConnectionString": "Data Source=c:\\Program Info\\LabelCast\\demo-sqlite.db;Version=3;",
   "DbTimeZone": "UTC",
-  "SqlQuery": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE name = '{name}' \r\nAND color = '{color}' \r\nLIMIT 1",
-  "SearchSqlQuery": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE name LIKE '{name}'\r\n    AND color LIKE '{color}'",
-  "SqlQueryNumeric": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE code = '{name}' \r\nLIMIT 1\r\n",
-  "DisplayField": "description",
+  "SqlQuery": "SELECT Name, Color, Description, Code, Price \r\nFROM Flowers \r\nWHERE name = '{name}' \r\nAND color = '{color}' \r\nLIMIT 1",
+  "SearchSqlQuery": "SELECT Name, Color, Description, Code, Price \r\nFROM Flowers \r\nWHERE name LIKE '{name}'\r\n    AND color LIKE '{color}'",
+  "SqlQueryNumeric": "SELECT Name, Color, Description, Code, Price \r\nFROM Flowers \r\nWHERE code = '{name}' \r\nLIMIT 1\r\n",
+  "DisplayField": "Description",
   "SearchFields": [
     "Name",
     "Color"
