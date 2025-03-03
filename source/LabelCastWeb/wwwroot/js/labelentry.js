@@ -294,7 +294,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
         mDescriptor.ReadyToPrint = respData.ReadyToPrint;
 
         if (mDescriptor.ReadyToPrint) {
-            mMessageLabel.innerText = 'Printing label';
+            // mMessageLabel.innerText = 'Printing label';
             debugPrint('Label ready to print');
             dbTimerIdx = 0;
 
@@ -611,15 +611,17 @@ document.addEventListener("DOMContentLoaded", (event) => {
                     // Database Error
                     updateResultFields(xhr.responseText, currentField);    
                     mErrorLabel.innerText = mDescriptor.DataQueryStatusText;
+                    mDescriptor.ReadyToPrint = false;
                     debugPrint('Server: Database Error "' + currentField + '" - ' + mDescriptor.DataQueryStatusText + ' (DataQueryStatus = ' + dbStatus[mDescriptor.DataQueryStatus] + ')');
                     dbTimerIdx = 0;
 
                 }
                 else {
-                    // Other type of error 
+                    // Other type of error
                     // console.error("Error: " + xhr.status + " - " + xhr.statusText);
                     updateResultFields(xhr.responseText, currentField);    
                     mErrorLabel.innerText = mDescriptor.ErrorMessage;
+                    mDescriptor.ReadyToPrint = false;
                     debugPrint('Server: Other Error - ' + mDescriptor.ErrorMessage);
                     dbTimerIdx = 0;
                 }

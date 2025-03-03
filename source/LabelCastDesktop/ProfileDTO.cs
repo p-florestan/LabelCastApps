@@ -128,7 +128,7 @@ namespace LabelCastDesktop
 
         [Category("Database"),
             Description("SQL query string to find items when wildcard symbol % is used."),
-            DisplayName("SQL Search - Main Query")]
+            DisplayName("SQL Search Query")]
         [Editor(typeof(MultilineStringEditor), typeof(UITypeEditor))]
         public String SearchSqlQuery { get; set; } = "";
 
@@ -295,6 +295,7 @@ namespace LabelCastDesktop
                 SqlQuery = this.SqlQuery,
                 SearchSqlQuery = this.SearchSqlQuery,
                 SqlQueryNumeric = this.SqlQueryNumeric,
+                DisplayField = this.DisplayField,
 
                 SearchFields = new List<string>(this.SearchFields),
                 DataFields = new List<string>(this.DataFields),

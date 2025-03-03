@@ -200,9 +200,11 @@ namespace LabelCastWeb.Controllers
                 var labelProcessor = new LabelProcessor(activeProfile, activePrinter);
                 (descResult, errorMsg) = labelProcessor.FinalizeAndPrintWeb(descriptor);
 
+                Logger.Write(Level.Debug, "AppController CheckFinalLabelData: error msg = " + errorMsg);
+
                 // There are 4 possible outcomes:
 
-                //   (1)  Other fields aren't filled out  --> show error message
+                //   (1)  Empty fields or printing error  --> show error message
                 if (!String.IsNullOrWhiteSpace(errorMsg))
                     return GetResult(406, descResult, errorMsg);     // HTTP 406 - Not Acceptable
 

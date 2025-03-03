@@ -8,7 +8,7 @@
   "SqlQuery": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE name = '{name}' \r\nAND color = '{color}' \r\nLIMIT 1",
   "SearchSqlQuery": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE name LIKE '{name}'\r\n    AND color LIKE '{color}'",
   "SqlQueryNumeric": "SELECT name, color, description, code, price \r\nFROM Flowers \r\nWHERE code = '{name}' \r\nLIMIT 1\r\n",
-  "DisplayField": "",
+  "DisplayField": "description",
   "SearchFields": [
     "Name",
     "Color"

@@ -369,16 +369,22 @@ namespace LabelCast
             if (descriptor.LabelCount <= 0)
                 msgResult += "Label count invalid.";
 
-            Logger.Write(Level.Debug, "Outcome of FinalizeAndPrint: DbQueryStatus " + descriptor.DataQueryStatus.ToString() + ", Error message = '" + msgResult + "'");
 
             // If all is fine - we print the label
-
-            if (descriptor.DataQueryStatus == DbQueryStatus.Success && String.IsNullOrWhiteSpace(msgResult))
+            if (String.IsNullOrWhiteSpace(msgResult))
             {
-                Logger.Write(Level.Debug, "Label finalized.");
-                descriptor.ReadyToPrint = true;
-                msgResult += SendLabelToPrinter(descriptor);
+                if (descriptor.DbQueryFields.Count == 0)
+                    descriptor.DataQueryStatus = DbQueryStatus.Success;
+
+                if (descriptor.DataQueryStatus == DbQueryStatus.Success)
+                {
+                    Logger.Write(Level.Debug, "Label finalized.");
+                    descriptor.ReadyToPrint = true;
+                    msgResult += SendLabelToPrinter(descriptor);
+                }
             }
+
+            Logger.Write(Level.Debug, "Outcome of FinalizeAndPrintWeb: DbQueryStatus " + descriptor.DataQueryStatus.ToString() + ", Error message = '" + msgResult + "'");
 
             return (descriptor, msgResult);
         }
@@ -604,6 +610,9 @@ namespace LabelCast
 
         private void WaitForDataEntryComplete()
         {
+
+            Logger.Write(Level.Debug, " WaitForDataEntryComplete: query field count = " + mDescriptor.DbQueryFields.Count);
+
             String msgResult = "";
 
             if (mDescriptor.DataQueryStatus == DbQueryStatus.Pending)
@@ -611,7 +620,7 @@ namespace LabelCast
                 Logger.Write(Level.Debug, " -- database query not complete, waiting ...");
                 DbQueryTimer.Start();
             }
-            else if (mDescriptor.DataQueryStatus == DbQueryStatus.Success)
+            else if (mDescriptor.DataQueryStatus == DbQueryStatus.Success || mDescriptor.DbQueryFields.Count == 0)
             {
                 Logger.Write(Level.Debug, " -- database query complete, sending label to printing.");
                 
@@ -654,8 +663,11 @@ namespace LabelCast
 
             Logger.Write(Level.Debug, "Printer Name: '" + mPrinter.Name + "', IP Address: " + mPrinter.IPAddress + ", port " + mPrinter.Port);
 
-            if (mPrinter.IPAddress.ToString() == "0.0.0.0")
+            if (mPrinter.IPAddress.MapToIPv4().ToString() == "0.0.0.0")
+            {
+                Logger.Write(Level.Debug, "Printer IP address is 0.0.0.0, cannot print");
                 return "Cannot print: invalid printer address 0.0.0.0";
+            }
 
             if (mPrinter.IPAddress.AddressFamily != AddressFamily.InterNetwork)
                 return "Cannot print: IP address of printer is not IPv4: " + mPrinter.IPAddress;
