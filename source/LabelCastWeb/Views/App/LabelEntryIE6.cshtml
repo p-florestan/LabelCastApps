@@ -14,7 +14,7 @@
 
     <div class="entry">
 
-        <form id="labelEntryForm" method="post" action="/labels/formqueue" autocomplete="off">
+        <form id="labelEntryForm" method="post" action="/labels/formqueue" autocomplete="off" >
 
             <div class="header">
                 <div class="logogroup">
@@ -65,7 +65,7 @@
                     <tr>
                         <td class="col1">@Model.EntryTable.Rows[i][0].ToString()</td>
                         <td class="col2">
-                            <input type="text" id="@colID" name="@varName" value="@value" onblur="inputLostFocus()" onfocus="inputGotFocus()" onkeydown="inputKeyDown()" />
+                            <input type="text" id="@colID" name="@varName" value="@value" onblur="inputLostFocus()" onfocus="inputGotFocus()" onkeydown="inputKeyDown(event)" />
                         </td>
                     </tr>
                 }

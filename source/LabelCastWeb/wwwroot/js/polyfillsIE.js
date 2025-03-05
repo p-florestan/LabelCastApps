@@ -3,38 +3,38 @@
 // --------------------------------------------------------------------------------------------------------
 
 
-if (!document.querySelectorAll)
-    document.querySelectorAll = function (selector) {
-        var head = document.documentElement.firstChild;
-        var styleTag = document.createElement("STYLE");
-        head.appendChild(styleTag);
-        document.__qsResult = [];
+// Document.querySelectorAll method (for IE-6)
+//
+// Note that this does not properly work for attribute queries (such as 'input[type="text"]')
+//
+if (!document.querySelectorAll) {
+    document.querySelectorAll = function (selectors) {
+        var style = document.createElement('style'), elements = [], element;
+        document.documentElement.firstChild.appendChild(style);
+        document._qsa = [];
 
-        styleTag.styleSheet.cssText = selector + "{x:expression(document.__qsResult.push(this))}";
+        style.styleSheet.cssText = selectors + '{x-qsa:expression(document._qsa && document._qsa.push(this))}';
         window.scrollBy(0, 0);
-        head.removeChild(styleTag);
+        style.parentNode.removeChild(style);
 
-        var result = [];
-        for (var i in document.__qsResult)
-            result.push(document.__qsResult[i]);
-        return result;
-    }
+        while (document._qsa.length) {
+            element = document._qsa.shift();
+            element.style.removeAttribute('x-qsa');
+            elements.push(element);
+        }
+        document._qsa = null;
+        return elements;
+    };
+}
 
+// Document.querySelector method (for IE-6)
 
-if (!document.querySelector)
-    document.querySelector = function (selector) {
-        var head = document.documentElement.firstChild;
-        var styleTag = document.createElement("STYLE");
-        head.appendChild(styleTag);
-        document.__qsResult = [];
-
-        styleTag.styleSheet.cssText = selector + "{x:expression(document.__qsResult.push(this))}";
-        window.scrollBy(0, 0);
-        head.removeChild(styleTag);
-
-        // Return first result only               
-        return document.__qsResult[0] || null;
-    }
+if (!document.querySelector) {
+    document.querySelector = function (selectors) {
+        var elements = document.querySelectorAll(selectors);
+        return (elements.length) ? elements[0] : null;
+    };
+}
 
 
 // Obtain all "own" properties of an object
@@ -50,9 +50,14 @@ function getKeys(obj) {
 
 // IE8 does not support trim() function
 if (typeof String.prototype.trim !== 'function') {
-    String.prototype.trim = function () {
-        return this.replace(/^\s+|\s+$/g, '');
-    };
+    try {
+        String.prototype.trim = function () {
+            return this.replace(/^\s+|\s+$/g, '');
+        };
+    }
+    catch (e) {
+        alert('error in polyfill')
+    }
 }
 
 // IE does not support classList array property.

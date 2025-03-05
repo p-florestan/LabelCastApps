@@ -372,6 +372,8 @@ namespace LabelCastWeb.Controllers
         [HttpPost("formqueue")]
         public async Task<IActionResult> SubmitLabelHtmlFormClassic()
         {
+            Logger.Write(Level.Debug, "FormQueue request received");
+
             LabelProcessor proc;
             DataTable entryTable;
             Dictionary<String, String> fieldList = new Dictionary<String, String>();
@@ -390,7 +392,7 @@ namespace LabelCastWeb.Controllers
 
             try 
             { 
-                Logger.Write(Level.Debug, "FormQueue request: " + JsonConvert.SerializeObject(fieldList, Formatting.Indented));
+                Logger.Write(Level.Debug, "FormQueue request data: " + JsonConvert.SerializeObject(fieldList, Formatting.Indented));
 
                 LabelDescriptor desc = proc.LabelDescriptor;
                 desc = UpdateDescriptorFromFieldList(desc, fieldList);

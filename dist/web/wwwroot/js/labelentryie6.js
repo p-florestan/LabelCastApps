@@ -13,13 +13,24 @@ mActivePrinter = '';
 mCurrentInput = null;
 
 // Input elements
-var mInputList = document.querySelectorAll('input[type="text"]');
+var i = 0;
+mInputList = [];
+while (true) {
+    var el = document.getElementById('col' + i);
+    if (el) {
+        mInputList.push(el);
+        i++;
+    }
+    else
+        break;
+}
 
 // Number of input elements
 var mInputRowCount = mInputList.length;
+debugPrint('mInputRowCount = ' + mInputRowCount);
 
 // Top input element
-var mFirstInput = document.querySelector('#col0');
+var mFirstInput = document.getElementById('col0');
 
 // List of "dbResult" elements - these are hidden form fields which are
 // in the dbResultField list but are not dbQuery fields and not EditFields
@@ -28,8 +39,8 @@ var dbResultList = document.querySelectorAll('input.dbResult');
 // Whether navigating through input fields triggers updates
 var mNavActive = true;
 
-var printButton = document.querySelector('#btnPrint');
-var clearButton = document.querySelector('#btnClear');
+var printButton = document.getElementById('btnPrint');
+var clearButton = document.getElementById('btnClear');
 
 
 
@@ -44,14 +55,19 @@ var clearButton = document.querySelector('#btnClear');
 //  days:  Number of days the cookie should be valid. If not provided,
 //         the cookie will be a session cookie (deleted when the browser is closed).
 function setCookie(name, value, days) {
-    var expires = "";
-    if (days) {
-        var date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));  // Convert days to milliseconds
-        expires = "; expires=" + date.toUTCString();
+    try {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));  // Convert days to milliseconds
+            expires = "; expires=" + 'x'; // date.toLocaleString();
+        }
+        // Set the cookie with the name, value, expiration, and optional path ("/" means the cookie is accessible throughout the site)
+        document.cookie = name + "=" + escape(value) + expires + "; path=/";
     }
-    // Set the cookie with the name, value, expiration, and optional path ("/" means the cookie is accessible throughout the site)
-    document.cookie = name + "=" + escape(value) + expires + "; path=/";
+    catch (e) {
+        alert('Error in script (labelentryie.js): ' + e.message);
+    }
 }
 
 // Read existing cookies
@@ -76,16 +92,16 @@ function isNumber(str) {
 }
 
 function focusAndSelect(inputElement) {
-    inputElement.focus(); 
+    inputElement.focus();
     setTimeout(function () {
         inputElement.select();
-    }, 10); 
+    }, 10);
 }
 
 
 // Diagnostics
 function debugPrint(text) {
-    if (!NoDebug) { 
+    if (!NoDebug) {
         var debugDiv = document.getElementById('debugMsg');
         debugDiv.innerHTML += text + '<br>';
     }
@@ -149,24 +165,24 @@ function clearButtonClick() {
 function clearInputFields() {
 
     // Clear DbQuery fields and EditFields
-    for (let n = 0; n < mInputList.length; n++) {
+    for (var n = 0; n < mInputList.length; n++) {
         mInputList[n].value = '';
     }
     mCurrentInput = 'col0';
     mNextInput = '';
 
     // Clear other DbResult fields
-    for (let n = 0; n < dbResultList.length; n++) {
-        dbResult[n].value = '';
+    for (var n = 0; n < dbResultList.length; n++) {
+        dbResultList[n].value = '';
     }
 
     // Clear special hidden fields
 
     document.querySelector('.entryTable input[name="Number of Labels"]').value = 1;
 
-    document.querySelector('input[name="CurrentEditField"]').value = '';
-    document.querySelector('input[name="DataQueryStatus"]').value = 0;
-    document.querySelector('input[name="PageEditIndex"]').value = 0;
+    document.getElementById('CurrentEditField').value = '';
+    document.getElementById('DataQueryStatus').value = 0;
+    document.getElementById('PageEditIndex').value = 0;
 
     var msgLabel = document.getElementById('msgLabel');
     if (msgLabel)
@@ -186,30 +202,55 @@ function clearInputFields() {
 
 
 // This advances the focus to the next inputbox below upon pressing ENTER key
-function inputKeyDown() {
-    var event = window.event;
+function inputKeyDown(event) {
+    var event = event || window.event;  // Handle cross-browser compatibility
     if (event.keyCode == 13) {
-        event.preventDefault(); // do not submit form
-        var idx = parseInt(event.srcElement.id.substring(3), 10);
+
+        // Do not submit form (prevent default behavior)
+        if (event.preventDefault) {
+            event.preventDefault();  // Modern browsers
+            event.stopPropagation();
+        } else {
+            event.returnValue = false;  // IE6 and earlier
+            event.cancelBubble = true;
+        }
+
+        var idx = 0;
+        var element = event.srcElement;
+        if (element && element.id) {
+            idx = parseInt(element.id.substring(3), 10);
+        }
 
         // numeric query? then position after dbQuery fields
         var fieldName = event.srcElement.getAttribute('name');
         var fieldValue = event.srcElement.value;
-        if (fieldName == GetFormFieldValue('FirstSearchField') && isNumber(fieldValue)) {
-            var nextInput = document.querySelector('#col' + GetFormFieldValue('FirstEditFieldIndex').toString());
-        }
+
+        debugPrint('fieldName = ' + fieldName + ', fieldValue = ' + fieldValue);
+        debugPrint('mInputRowCount = ' + mInputRowCount);
+
+        //if (fieldName == GetFormFieldValue('FirstSearchField') && isNumber(fieldValue)) {
+        //    debugPrint('--> numeric query');
+        //    var nextInput = document.querySelector('#col' + GetFormFieldValue('FirstEditFieldIndex').toString());
+        //}
 
         if (idx < mInputRowCount - 1) {
-            var nextInput = document.querySelector('#col' + (idx + 1).toString());
-            nextInput.focus();
+            var nextInput = document.getElementById('col' + (idx + 1).toString());
+            if (nextInput)
+                nextInput.focus();
+            else 
+                debugPrint('nextInput field col' + + (idx + 1).toString() + ' not found');
         }
 
         else {
             // Pressing ENTER on last input prints the label.
             // The last input is always 'Number of Labels'.
             debugPrint(' ENTER KEY ON LABEL COUNT');
-            printButtonClick();
+            // when testing delay form submit:
+            // setTimeout(function () { printButtonClick(); }, 3000);
+            printButtonClick();            
         }
+
+        return false;
     }
 }
 
@@ -230,14 +271,14 @@ function inputGotFocus() {
     var event = window.event;
     event.srcElement.select();
     debugPrint('Got focus: ' + event.srcElement.getAttribute('name'));
-    
+
     mNextInput = event.srcElement.id;
 
     if (mCurrentInput && mNextInput !== mCurrentInput) {
 
         // numeric query? then position after dbQuery fields
         var inputName = mCurrentInput.getAttribute('name');
-        var inputValue = mCurrentInput.value;        
+        var inputValue = mCurrentInput.value;
 
         debugPrint('GetFormFieldValue = ' + GetFormFieldValue('FirstSearchField'));
 
@@ -259,6 +300,8 @@ function inputGotFocus() {
 
 
 
+
+
 // --------------------------------------------------------------------------------------------------------
 // Main Script
 // --------------------------------------------------------------------------------------------------------
@@ -268,8 +311,6 @@ mActiveProfile = getCookie('ActiveProfile');
 mActivePrinter = getCookie('ActivePrinter');
 
 editIndex = GetFormFieldValue('PageEditIndex');
-focusInput = document.querySelector('#col' + editIndex.toString());
+focusInput = document.getElementById('col' + editIndex.toString());
 focusInput.focus();
-
-
 
