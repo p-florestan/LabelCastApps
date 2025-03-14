@@ -274,6 +274,8 @@ namespace LabelCastWeb.Controllers
         {
             try
             {
+                App.Config.ReadConfiguration();
+
                 var req = new RequestHandler(request,
                                              App.Config.ConfigDir,
                                              App.Config.ProfileList,
@@ -292,16 +294,19 @@ namespace LabelCastWeb.Controllers
             catch (DataException ex)
             {
                 // HTTP 422 Unprocessable Entity
+                Logger.Write(Level.Debug, "SubmitLabel HTTP 422 Unprocessable Entity error: " + ex.Message);
                 return StatusCode(422, ex.Message);
             }
             catch (ArgumentException ex)
             {
                 // Invalid data submitted - HTTP 406 Not Acceptable
+                Logger.Write(Level.Debug, "SubmitLabel HTTP 406 Not Acceptable error: " + ex.Message);
                 return StatusCode(406, ex.Message);
             }
             catch (Exception ex)
             {
                 // Any other error - HTTP 500 Internal Server Error
+                Logger.Write(Level.Debug, "SubmitLabel HTTP 500 Internal Server Error: " + ex.Message);
                 return StatusCode(500, ex.Message);
             }
         }
@@ -319,6 +324,8 @@ namespace LabelCastWeb.Controllers
         {
             try
             {
+                App.Config.ReadConfiguration();
+
                 // Request handler fills out all fields, except DbResultFields
                 var req = new RequestHandler(request,
                                              App.Config.ConfigDir,
@@ -341,16 +348,19 @@ namespace LabelCastWeb.Controllers
             catch (DataException ex)
             {
                 // HTTP 422 Unprocessable Entity
+                Logger.Write(Level.Debug, "SubmitLabel HTTP 422 Unprocessable Entity error: " + ex.Message);
                 return StatusCode(422, ex.Message);
             }
             catch (ArgumentException ex)
             {
                 // Invalid data submitted - HTTP 406 Not Acceptable
+                Logger.Write(Level.Debug, "SubmitLabel HTTP 406 Not Acceptable error: " + ex.Message);
                 return StatusCode(406, ex.Message);
             }
             catch (Exception ex)
             {
                 // Any other error - HTTP 500 Internal Server Error
+                Logger.Write(Level.Debug, "SubmitLabel HTTP 500 Internal Server Error: " + ex.Message);
                 return StatusCode(500, ex.Message);
             }
         }

@@ -19,7 +19,7 @@
             <div class="header">
                 <div class="logogroup">
                     <img src="~/img/barcode2.png" title="applogo" />
-                    <div class="logo">LabelCast</div>
+                    <span class="logo">LabelCast</span>
                 </div>
                 <table id="apptitle">
                     <tr>
@@ -59,8 +59,6 @@
                 {
                     String colID = "col" + i.ToString();
                     String varName = Model.EntryTable.Rows[i][0].ToString() ?? "";
-                    //if (varName == "Number of Labels")
-                    //    varName = "labelcount";
                     String value = Model.EntryTable.Rows[i][1].ToString() ?? "";
                     <tr>
                         <td class="col1">@Model.EntryTable.Rows[i][0].ToString()</td>

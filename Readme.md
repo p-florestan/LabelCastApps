@@ -1,6 +1,6 @@
 ﻿**Overview**
 
-LabelCast is software which allows printing of barcode labels to label printers supporting ZPL (Zebra Printer Language). This includes all printers from the company Zebra, bu other manufacturers such as TSC (Taiwan Semiconductor), Intermec (Honeywell), Sato, Bixolon and Cab also offer printers which support or can emulate ZPL.
+LabelCast is software which allows printing of barcode labels to label printers supporting ZPL (Zebra Printer Language). This includes all printers from the company Zebra, but other manufacturers such as TSC (Taiwan Semiconductor), Intermec (Honeywell), Sato, Bixolon and Cab also offer printers which support or can emulate ZPL.
 
 The software UI allows you to select a barcode label design and then print by:
 

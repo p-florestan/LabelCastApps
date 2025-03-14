@@ -155,6 +155,9 @@ namespace LabelCast
         // Find the profile matching label content, if any.
         private Profile MatchProfile(List<Profile> profileList)
         {
+            if (profileList.Count == 0)
+                throw new ApplicationException("Cannot match profile - list of profiles is empty.");
+
             Profile? matchedProfile = null;
 
             if (mContentType == LabelContentType.JSON)
