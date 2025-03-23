@@ -46,8 +46,9 @@ You can also configure LabelCast to print labels using HTTP API requests. You ca
 
 You must install the web application to take advantage of this feature.
 
-**Detailed User Manual**
+**Source Code**
 
-A detailed user manual is contained in the /docs folder of the repository.
+Source code is on GitHub:
+[https://github.com/p-florestan/LabelCastApps](https://github.com/p-florestan/LabelCastApps)
 
 
